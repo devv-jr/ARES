@@ -18,8 +18,8 @@
 **[ SISTEMA ACTIVO ] [ MODO AGENTE ] [ CIBERSEGURIDAD ]**
 
 ![Status](https://img.shields.io/badge/status-en%20desarrollo-brightgreen?style=flat-square&color=00ff41&labelColor=0d0d0d)
-![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue?style=flat-square&color=00b4d8&labelColor=0d0d0d)
-![Stack](https://img.shields.io/badge/stack-React%20Native%20%2B%20Python-orange?style=flat-square&color=ff6b35&labelColor=0d0d0d)
+![Platform](https://img.shields.io/badge/platform-Web%20%7C%20PWA-blue?style=flat-square&color=00b4d8&labelColor=0d0d0d)
+![Stack](https://img.shields.io/badge/stack-React%20%2B%20Python-orange?style=flat-square&color=ff6b35&labelColor=0d0d0d)
 ![AI](https://img.shields.io/badge/AI-agentic-purple?style=flat-square&color=9d4edd&labelColor=0d0d0d)
 ![License](https://img.shields.io/badge/license-MIT-red?style=flat-square&color=e63946&labelColor=0d0d0d)
 
@@ -85,9 +85,9 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────┐
-│              📱  CAPA DE PRESENTACIÓN                        │
+│              🌐  CAPA DE PRESENTACIÓN                        │
 │                                                              │
-│         React Native + Expo (iOS / Android)                  │
+│              React + Vite · PWA (Web App)                    │
 │         ┌─────────────┐  ┌──────────────┐                   │
 │         │  Chat UI    │  │  Dashboard   │                   │
 │         └─────────────┘  └──────────────┘                   │
@@ -115,7 +115,7 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
 
 | Capa | Tecnología |
 |------|-----------|
-| Mobile App | React Native, Expo |
+| Web App / PWA | React, Vite |
 | Agente / Backend | Python |
 | IA | LLM vía API (agéntico) |
 | Comunicación | REST / WebSocket |
@@ -129,7 +129,6 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
 ```bash
 node >= 18.0.0
 python >= 3.11
-expo-cli instalado globalmente
 ```
 
 ### Clonar el repositorio
@@ -139,12 +138,12 @@ git clone https://github.com/tu-org/ADA.git
 cd ADA
 ```
 
-### App móvil (React Native + Expo)
+### Web App (React + Vite)
 
 ```bash
-cd mobile
+cd web
 npm install
-npx expo start
+npm run dev
 ```
 
 ### Backend del agente (Python)
@@ -195,11 +194,13 @@ EXPO_PUBLIC_API_URL=http://localhost:8000
 
 ```
 ADA/
-├── 📱 mobile/                  # App React Native + Expo
-│   ├── app/                    # Rutas (Expo Router)
-│   ├── components/             # Componentes reutilizables
-│   ├── hooks/                  # Custom hooks
-│   └── services/               # Llamadas al agente
+├── 🌐 web/                     # Web App React + Vite (PWA)
+│   ├── src/
+│   │   ├── pages/              # Vistas principales
+│   │   ├── components/         # Componentes reutilizables
+│   │   ├── hooks/              # Custom hooks
+│   │   └── services/           # Llamadas al agente
+│   └── public/                 # Assets estáticos + manifest.json
 │
 ├── 🤖 agent/                   # Backend Python
 │   ├── core/                   # Lógica del agente
@@ -217,11 +218,12 @@ ADA/
 
 > Proyecto desarrollado para la **Feria de Ciencias — IEU Universidad, Puebla 2026**
 
-| Rol | Responsable |
-|-----|------------|
-| Desarrollo móvil | — |
-| Backend / Agente IA | — |
-| Diseño UX/UI | — |
+| | Integrante | Rol |
+|-|-----------|-----|
+| 🦏 | **Bruno** | Tech Lead · Full Stack Developer · Arquitectura e Integración |
+| 🎨 | **Yered** | Frontend Developer · UI/UX Lead · Experiencia de usuario |
+| 🐍 | **Jairo** | Backend Developer Junior · Python · Lógica del agente |
+| 📚 | **Axel** | Security Research · Documentación · Investigación en ciberseguridad |
 
 ---
 
