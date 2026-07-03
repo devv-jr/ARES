@@ -83,10 +83,10 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
 └──────────────────────────────┬───────────────────────────────┘
                                │
                                ▼
-┌──────────────────────────────────────────────────────────────┐
-│              🌐  CAPA DE PRESENTACIÓN                        │
-│                                                              │
-│              React + Vite · PWA (Web App)                    │
+┌─────────────────────────────────────────────────────────────┐
+│              🌐  CAPA DE PRESENTACIÓN                       │
+│                                                             │
+│              React + Next.js · PWA (Web App)                │
 │         ┌─────────────┐  ┌──────────────┐                   │
 │         │  Chat UI    │  │  Dashboard   │                   │
 │         └─────────────┘  └──────────────┘                   │
@@ -114,7 +114,7 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
 
 | Capa | Tecnología |
 |------|-----------|
-| Web App / PWA | React, Vite |
+| Web App / PWA | React, Next.js |
 | Agente / Backend | Python |
 | IA | LLM vía API (agéntico) |
 | Comunicación | REST / WebSocket |
