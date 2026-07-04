@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from app.models.chat import ChatRequest, ChatResponse
-from app.services.agent_service import generate_chat_response, generate_chat_response_stream
+from app.services.agent_service import generate_chat_response, generate_chat_response_stream, clear_chat_session
 from agent.core.llm_client import check_connection
 
 app = FastAPI(title="ARES API", version="1.0.0")
@@ -37,15 +37,18 @@ def model_status():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest):
-    reply = generate_chat_response(payload.message, payload.mode)
+    session = payload.session_id or "default"
+    reply = generate_chat_response(payload.message, payload.mode, session_id=session)
     return ChatResponse(response=reply)
 
 
 @app.post("/chat/stream")
 def chat_stream(payload: ChatRequest):
+    session = payload.session_id or "default"
+
     def event_generator():
         try:
-            for chunk in generate_chat_response_stream(payload.message, payload.mode):
+            for chunk in generate_chat_response_stream(payload.message, payload.mode, session_id=session):
                 # Cada fragmento va como JSON para preservar saltos de línea
                 # y caracteres especiales dentro del formato SSE.
                 yield f"data: {json.dumps(chunk)}\n\n"
@@ -57,3 +60,10 @@ def chat_stream(payload: ChatRequest):
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.post("/chat/clear")
+def chat_clear(payload: ChatRequest):
+    session = payload.session_id or "default"
+    clear_chat_session(session)
+    return {"status": "ok", "session_id": session}

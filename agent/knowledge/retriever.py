@@ -33,7 +33,7 @@ def _load_knowledge() -> None:
     if not kb_dir.exists():
         return
 
-    for md_file in kb_dir.glob("*.md"):
+    for md_file in kb_dir.glob("**/*.md"):
         text = md_file.read_text(encoding="utf-8")
         paragraphs = re.split(r"\n\s*\n", text)
         for para in paragraphs:

@@ -350,6 +350,7 @@ export default function AresDashboard() {
   const [selectedMode, setSelectedMode] = useState("learning")
   const [modeMenuOpen, setModeMenuOpen] = useState(false)
   const topNavRef = useRef(null)
+  const sessionIdRef = useRef(typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "default")
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -404,7 +405,7 @@ export default function AresDashboard() {
       const res = await fetch(`${API_URL}/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, mode: selectedMode }),
+        body: JSON.stringify({ message: text, mode: selectedMode, session_id: sessionIdRef.current }),
       })
 
       if (!res.ok || !res.body) {

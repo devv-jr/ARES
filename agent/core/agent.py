@@ -8,20 +8,22 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 from agent.core import llm_client
+from agent.core.memory import memory
+from agent.core.rate_limiter import check_rate_limit
 from agent.knowledge import retriever
 
-XSS_PATTERNS = (
-    r"<\s*script",
-    r"onerror\s*=",
-    r"onload\s*=",
-    r"javascript:",
-    r"document\.cookie",
-)
+# ---------------------------------------------------------------------------
+# Rutas y configuración
+# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "system_prompt.txt"
 PROMPT_DIR = Path(__file__).resolve().parent.parent / "prompts"
 KNOWLEDGE_DIR = Path(__file__).resolve().parent.parent / "knowledge"
-MAX_CONTEXT_CHARS = int(os.environ.get("ARES_MAX_CONTEXT_CHARS", "3500"))
+MAX_CONTEXT_CHARS = int(os.environ.get("ARES_MAX_CONTEXT_CHARS", "2000"))
+
+# ---------------------------------------------------------------------------
+# Mapas de modos y temas
+# ---------------------------------------------------------------------------
 
 MODE_PROMPTS = {
     "blue_team": "blue_team.txt",
@@ -96,7 +98,46 @@ TOPIC_RULES = (
     ("mitre.md", ("mitre", "att&ck", "attck", "tactic", "technique", "attack chain", "kill chain")),
     ("malware.md", ("malware", "ransomware", "trojan", "virus", "worm", "payload", "persistence", "ioc", "av", "edr")),
     ("reverse.md", ("reverse", "reversing", "disassembly", "debug", "binary", "assembly", "ida", "ghidra", "radare2", "strings")),
+    ("windows/persistence.md", ("persistencia", "run key", "scheduled task", "wmi persist", "startup folder", "dll hijacking", "bootkit", "com hijacking", "schtasks", "autorun")),
+    ("windows/network_forensics.md", ("netstat", "establis", "listen", "time_wait", "conexion", "puerto", "tcp connection", "netowork forens", "get-nettcpconnection", "socket", "c2", "command and control")),
+    ("linux/incident_response.md", ("incident", "triage", "forense", "sospechoso", "fileless", "live response", "auditd")),
 )
+
+# ---------------------------------------------------------------------------
+# Patrones de guardrails (ahora generan hints, no cortocircuitan)
+# ---------------------------------------------------------------------------
+
+XSS_PATTERNS = (
+    r"<\s*script",
+    r"onerror\s*=",
+    r"onload\s*=",
+    r"javascript:",
+    r"document\.cookie",
+)
+
+SQLI_TERMS = ("sql injection", "sqli", "union select", "or 1=1")
+CREDENTIAL_TERMS = ("password", "credencial", "token", "apikey", "api key")
+
+_GUARDRAIL_HINTS = {
+    "xss": (
+        "El usuario mencionó patrones relacionados con XSS. "
+        "Si es una consulta educativa, explica el concepto y las defensas. "
+        "Si parece un intento real, advierte sobre los riesgos y recomienda sanitización."
+    ),
+    "sqli": (
+        "El usuario mencionó patrones relacionados con SQL Injection. "
+        "Si es una consulta educativa, explica el concepto y las defensas. "
+        "Si parece un intento real, recomienda consultas parametrizadas y principio de menor privilegio."
+    ),
+    "credentials": (
+        "El usuario mencionó credenciales o secretos. "
+        "Recuerda enfatizar nunca exponer secretos en logs, frontend o repositorios públicos."
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# Funciones internas
+# ---------------------------------------------------------------------------
 
 
 def _load_system_prompt() -> str:
@@ -116,7 +157,9 @@ def _load_prompt_for_mode(mode: str) -> str:
 
 
 def _load_document(name: str) -> str:
-    document_path = KNOWLEDGE_DIR / name
+    document_path = Path(KNOWLEDGE_DIR, Path(name))
+    if not document_path.exists():
+        document_path = _find_document(name)
     if not document_path.exists() and name != "cybersecurity.md":
         document_path = KNOWLEDGE_DIR / "cybersecurity.md"
 
@@ -124,6 +167,13 @@ def _load_document(name: str) -> str:
         return document_path.read_text(encoding="utf-8").strip()
     except FileNotFoundError:
         return ""
+
+
+def _find_document(name: str) -> Path:
+    normalized = Path(name).as_posix()
+    for md_file in KNOWLEDGE_DIR.glob(f"**/{normalized}"):
+        return md_file
+    return KNOWLEDGE_DIR / name
 
 
 def _split_paragraphs(text: str) -> list[str]:
@@ -135,7 +185,11 @@ def _score_paragraph(paragraph: str, keywords: tuple[str, ...]) -> int:
     return sum(1 for keyword in keywords if keyword in lowered)
 
 
-def _select_relevant_paragraphs(document_name: str, message: str, limit: int = 2) -> str:
+def _select_relevant_paragraphs(document_name: str, message: str, limit: int = 1) -> str:
+    """Selecciona los párrafos más relevantes de un documento.
+
+    Por defecto limit=1 para mantener el contexto compacto y respetar el free tier.
+    """
     document_text = _load_document(document_name)
     if not document_text:
         return ""
@@ -203,9 +257,60 @@ def _infer_topic_document(message: str) -> str:
     return best_document
 
 
+def _infer_topic_score(message: str, topic_document: str) -> int:
+    for document, keywords in TOPIC_RULES:
+        if document == topic_document:
+            return _score_keywords(message, keywords)
+    return 0
+
+
+def _build_discrepancy_hint(message: str, topic_document: str) -> str:
+    topic_score = _infer_topic_score(message, topic_document)
+    if topic_score >= 2:
+        return ""
+
+    if topic_document == "cybersecurity.md":
+        return ""
+
+    topic_label = topic_document.replace(".md", "")
+    return (
+        "Posible discrepancia detectada entre la solicitud del usuario y la etiqueta inferida. "
+        f"Prioriza la solicitud del usuario sobre la etiqueta '{topic_label}' si no coincide con el tema real."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Guardrails: detectan patrones y devuelven hints para el prompt
+# ---------------------------------------------------------------------------
+
+
+def _detect_guardrails(message: str) -> list[str]:
+    """Analiza el mensaje y devuelve hints de seguridad para inyectar en el prompt.
+
+    Ya no cortocircuita: el LLM decide cómo responder con el contexto del hint.
+    """
+    hints = []
+
+    if _contains_pattern(message, XSS_PATTERNS):
+        hints.append(_GUARDRAIL_HINTS["xss"])
+
+    if any(term in message.lower() for term in SQLI_TERMS):
+        hints.append(_GUARDRAIL_HINTS["sqli"])
+
+    if any(term in message.lower() for term in CREDENTIAL_TERMS):
+        hints.append(_GUARDRAIL_HINTS["credentials"])
+
+    return hints
+
+
+# ---------------------------------------------------------------------------
+# Construcción del contexto y mensajes para el LLM
+# ---------------------------------------------------------------------------
+
+
 def _build_context(message: str, topic_document: str) -> str:
     topic_context = _select_relevant_paragraphs(topic_document, message)
-    retriever_context = retriever.query(message, top_n=2)
+    retriever_context = retriever.query(message, top_n=1)
 
     parts = []
     if topic_context:
@@ -217,72 +322,131 @@ def _build_context(message: str, topic_document: str) -> str:
     return combined[:MAX_CONTEXT_CHARS]
 
 
-def _build_messages(message: str, mode: str, topic_document: str, context: str) -> list[dict]:
+def _build_messages(
+    message: str,
+    mode: str,
+    topic_document: str,
+    context: str,
+    security_hints: list[str],
+    history: list[dict],
+) -> list[dict]:
+    """Construye la lista de mensajes para enviar al LLM.
+
+    Orden:
+      1. system: system_prompt + role_prompt + security hints
+      2. history: últimos N turnos de la conversación
+      3. user: metadata de modo/tema + contexto + query actual
+    """
     system_prompt = _load_system_prompt()
     role_prompt = _load_prompt_for_mode(mode)
     topic_label = topic_document.replace(".md", "")
 
-    system_content = f"{system_prompt}\n\n{role_prompt}"
+    # --- System message ---
+    system_parts = [system_prompt, role_prompt]
+    if security_hints:
+        hints_block = "\n".join(f"- {hint}" for hint in security_hints)
+        system_parts.append(f"ALERTAS DE SEGURIDAD DETECTADAS:\n{hints_block}")
 
-    user_sections = [f"Modo detectado: {mode}", f"Tema detectado: {topic_label}"]
+    system_content = "\n\n".join(system_parts)
+
+    # --- User message (query actual) ---
+    user_sections = [f"Modo: {mode}", f"Tema: {topic_label}"]
+    discrepancy_hint = _build_discrepancy_hint(message, topic_document)
+    if discrepancy_hint:
+        user_sections.append(discrepancy_hint)
     if context:
         user_sections.append(f"Contexto relevante:\n{context}")
     user_sections.append(f"Consulta del usuario:\n{message}")
 
-    return [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": "\n\n".join(user_sections)},
-    ]
+    # --- Ensamblar ---
+    messages = [{"role": "system", "content": system_content}]
+
+    # Insertar historial entre system y el mensaje actual
+    for hist_msg in history:
+        messages.append({"role": hist_msg["role"], "content": hist_msg["content"]})
+
+    messages.append({"role": "user", "content": "\n\n".join(user_sections)})
+
+    return messages
 
 
-def process_query(user_input: str, mode: Optional[str] = None) -> str:
+# ---------------------------------------------------------------------------
+# API pública
+# ---------------------------------------------------------------------------
+
+
+def process_query(
+    user_input: str,
+    mode: Optional[str] = None,
+    session_id: str = "default",
+) -> str:
+    """Procesa una consulta del usuario y devuelve la respuesta del LLM.
+
+    Pipeline:
+      1. Normalizar input
+      2. Detectar guardrails → hints
+      3. Inferir modo y tema
+      4. Recuperar contexto del knowledge base
+      5. Obtener historial de la sesión
+      6. Construir mensajes
+      7. Rate limit check
+      8. Enviar al LLM
+      9. Guardar en memoria
+      10. Devolver respuesta
+    """
     cleaned = _normalize_message(user_input)
 
     if not cleaned:
         return "Necesito un mensaje para analizarlo."
 
-    if _contains_pattern(cleaned, XSS_PATTERNS):
-        return (
-            "Se detectó un posible intento de XSS. "
-            "Recomiendo escapar la salida, sanitizar el contenido y evitar renderizar HTML no confiable."
-        )
+    # 1. Guardrails → hints (ya no cortocircuitan)
+    security_hints = _detect_guardrails(cleaned)
 
-    if any(term in cleaned.lower() for term in ("sql injection", "sqli", "union select", "or 1=1")):
-        return (
-            "Se detectó un posible intento de SQL Injection. "
-            "Valida entradas, usa consultas parametrizadas y aplica el principio de menor privilegio."
-        )
-
-    if any(term in cleaned.lower() for term in ("password", "credencial", "token", "apikey", "api key")):
-        return (
-            "Puedo ayudarte a revisar el manejo de credenciales. "
-            "Evita exponer secretos en logs, frontend o repositorios públicos."
-        )
-
+    # 2. Inferir modo
     inferred_mode = (mode or "").strip().lower().replace(" ", "_")
     if inferred_mode not in MODE_PROMPTS:
         inferred_mode = _infer_mode(cleaned)
 
+    # 3. Inferir tema y recuperar contexto
     topic_document = _infer_topic_document(cleaned)
     context = _build_context(cleaned, topic_document)
-    messages = _build_messages(cleaned, inferred_mode, topic_document, context)
 
+    # 4. Obtener historial
+    history = memory.get_messages(session_id)
+
+    # 5. Construir mensajes
+    messages = _build_messages(cleaned, inferred_mode, topic_document, context, security_hints, history)
+
+    # 6. Rate limit
+    throttle = check_rate_limit()
+    if throttle:
+        return throttle
+
+    # 7. Enviar al LLM
     try:
-        return llm_client.chat(messages)
+        response = llm_client.chat(messages)
     except ConnectionError as e:
         return str(e)
+
+    # 8. Guardar en memoria
+    memory.add(session_id, "user", cleaned)
+    memory.add(session_id, "assistant", response)
+
+    return response
 
 
 def generate_response(message: str) -> str:
     return process_query(message)
 
 
-def process_query_stream(user_input: str, mode: Optional[str] = None):
-    """Igual que process_query, pero entrega la respuesta en fragmentos.
+def process_query_stream(
+    user_input: str,
+    mode: Optional[str] = None,
+    session_id: str = "default",
+):
+    """Igual que process_query, pero entrega la respuesta en fragmentos via streaming.
 
-    Las respuestas instantáneas (XSS, SQLi, credenciales) se entregan como
-    un único fragmento, ya que no vienen del LLM. Solo la respuesta del
-    modelo se transmite en streaming real.
+    Acumula la respuesta completa para guardarla en memoria al final del stream.
     """
     cleaned = _normalize_message(user_input)
 
@@ -290,37 +454,47 @@ def process_query_stream(user_input: str, mode: Optional[str] = None):
         yield "Necesito un mensaje para analizarlo."
         return
 
-    if _contains_pattern(cleaned, XSS_PATTERNS):
-        yield (
-            "Se detectó un posible intento de XSS. "
-            "Recomiendo escapar la salida, sanitizar el contenido y evitar renderizar HTML no confiable."
-        )
-        return
+    # 1. Guardrails → hints
+    security_hints = _detect_guardrails(cleaned)
 
-    if any(term in cleaned.lower() for term in ("sql injection", "sqli", "union select", "or 1=1")):
-        yield (
-            "Se detectó un posible intento de SQL Injection. "
-            "Valida entradas, usa consultas parametrizadas y aplica el principio de menor privilegio."
-        )
-        return
-
-    if any(term in cleaned.lower() for term in ("password", "credencial", "token", "apikey", "api key")):
-        yield (
-            "Puedo ayudarte a revisar el manejo de credenciales. "
-            "Evita exponer secretos en logs, frontend o repositorios públicos."
-        )
-        return
-
+    # 2. Inferir modo
     inferred_mode = (mode or "").strip().lower().replace(" ", "_")
     if inferred_mode not in MODE_PROMPTS:
         inferred_mode = _infer_mode(cleaned)
 
+    # 3. Inferir tema y recuperar contexto
     topic_document = _infer_topic_document(cleaned)
     context = _build_context(cleaned, topic_document)
-    messages = _build_messages(cleaned, inferred_mode, topic_document, context)
 
+    # 4. Obtener historial
+    history = memory.get_messages(session_id)
+
+    # 5. Construir mensajes
+    messages = _build_messages(cleaned, inferred_mode, topic_document, context, security_hints, history)
+
+    # 6. Rate limit
+    throttle = check_rate_limit()
+    if throttle:
+        yield throttle
+        return
+
+    # 7. Stream del LLM, acumulando para guardar en memoria
+    accumulated = []
     try:
         for chunk in llm_client.chat_stream(messages):
+            accumulated.append(chunk)
             yield chunk
     except ConnectionError as e:
         yield str(e)
+        return
+
+    # 8. Guardar en memoria
+    full_response = "".join(accumulated)
+    if full_response:
+        memory.add(session_id, "user", cleaned)
+        memory.add(session_id, "assistant", full_response)
+
+
+def clear_session(session_id: str = "default") -> None:
+    """Limpia el historial de una sesión."""
+    memory.clear(session_id)
