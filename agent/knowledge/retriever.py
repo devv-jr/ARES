@@ -48,7 +48,7 @@ def _load_knowledge() -> None:
                 _chunks.append((tokens, para))
 
 
-def query(user_message: str, top_n: int = 3) -> str:
+def query(user_message: str, top_n: int = 2) -> str:
     if not _chunks:
         _load_knowledge()
 
