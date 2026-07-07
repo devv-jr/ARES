@@ -4,3 +4,6 @@
 *.env.test.local
 
 *node_modules/
+
+*venv/
+

@@ -1,5 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import 'highlight.js/styles/github-dark.css'
 
 export const metadata = {
   title: 'ARES — IA Agéntica de Ciberseguridad',
