@@ -135,7 +135,7 @@
 │              🧠  PROVEEDORES DE IA (Failover)                │
 │                                                              │
 │   🥇 NVIDIA NIM (primario)                                   │
-│   🥈 Google Gemini (fallback)                                │
+│   🥈 OpenRouter (fallback)                                   │
 │   🥉 Ollama Local (fallback final)                           │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
@@ -195,7 +195,7 @@ ARES/
 | 🌐 **Frontend** | Next.js 16 + React 19 + Tailwind CSS v4 | Interfaz de usuario PWA |
 | 💻 **Backend** | FastAPI (Python) | API REST y SSE streaming |
 | 🤖 **Agente** | Python + Arquitectura agéntica | Pipeline de razonamiento IA |
-| 🧠 **LLM** | NVIDIA NIM → Gemini → Ollama | Inferencia del modelo de lenguaje |
+| 🧠 **LLM** | NVIDIA NIM → OpenRouter → Ollama | Inferencia del modelo de lenguaje |
 | 📚 **RAG** | Keyword TF Matching | Recuperación de conocimiento |
 | 🔒 **Guardrails** | Detección de patrones (XSS, SQLi, credenciales) | Seguridad del sistema |
 

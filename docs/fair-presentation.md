@@ -55,7 +55,7 @@
 | **Institución** | IEU Universidad, Puebla |
 | **Evento** | Feria de Ciencias 2026 |
 | **Equipo** | Bruno, Yered, Jairo, Axel |
-| **Tecnologías** | Next.js, React, Python, FastAPI, NVIDIA NIM, Gemini |
+| **Tecnologías** | Next.js, React, Python, FastAPI, NVIDIA NIM, OpenRouter |
 | **Licencia** | MIT Open Source |
 
 ---
@@ -126,7 +126,7 @@ La inteligencia artificial ha avanzado lo suficiente para crear asistentes espec
 │      ├─ Recupera historial de la sesión                          │
 │      ├─ Construye el prompt completo                             │
 │      ├─ Verifica rate limit                                      │
-│      ├─ Consulta al LLM (NIM → Gemini → Ollama)                │
+│      ├─ Consulta al LLM (NIM → OpenRouter → Ollama)            │
 │      └─ Guarda en memoria                                        │
 │  5.  Respuesta streamed letra por letra al frontend              │
 │  6.  Usuario ve la respuesta en tiempo real                      │

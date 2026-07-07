@@ -12,6 +12,7 @@ import InputArea from "../components/InputArea"
 import FeatureCard from "../components/FeatureCard"
 import ChatLog from "../components/ChatLog"
 import MissionConsole from "../components/MissionConsole"
+import OpsPanel from "../components/OpsPanel"
 
 export default function AresDashboard() {
   const [input, setInput] = useState("")
@@ -23,6 +24,7 @@ export default function AresDashboard() {
   const [activeSection, setActiveSection] = useState("chat")
   const [dashboardOpen, setDashboardOpen] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [activeContainerId, setActiveContainerId] = useState(null)
   const topNavRef = useRef(null)
   const sessionIdRef = useRef(typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "default")
 
@@ -349,13 +351,10 @@ export default function AresDashboard() {
 
             {dashboardOpen && activeSection === "console" && (
               <div className="flex flex-col items-center">
-                <MissionConsole
-                  messages={messages}
-                  input={input}
-                  setInput={setInput}
-                  handleSend={handleSend}
-                  loading={loading}
-                  error={error}
+                <OpsPanel
+                  chatProps={{ messages, input, setInput, handleSend, loading, error }}
+                  containerId={activeContainerId} // null/undefined = shell local
+                  targetIp={activeContainerId ? "172.20.0.4" : undefined}
                 />
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}

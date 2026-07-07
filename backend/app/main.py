@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from app.models.chat import ChatRequest, ChatResponse
 from app.services.agent_service import generate_chat_response, generate_chat_response_stream, clear_chat_session
 from agent.core.llm_client import check_connection
+from agent.core import docker_manager
 
 app = FastAPI(title="ARES API", version="1.0.0")
 
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(docker_manager.router)
 
 
 @app.get("/")

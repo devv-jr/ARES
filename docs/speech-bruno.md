@@ -101,7 +101,7 @@
 
 > Algo de lo que estoy particularmente orgulloso es nuestro **sistema de failover triple**.
 >
-> ARES intenta primero conectar con **NVIDIA NIM**, un servicio en la nube. Si no está disponible, automáticamente cae a **Google Gemini**. Y si ese tampoco funciona, usamos **Ollama** de manera local.
+> ARES intenta primero conectar con **NVIDIA NIM**, un servicio en la nube. Si no está disponible, automáticamente cae a **OpenRouter**. Y si ese tampoco funciona, usamos **Ollama** de manera local.
 >
 > Esto significa que **ARES nunca se queda sin respuesta**. Así es como la ingeniería asegura la disponibilidad del servicio.
 

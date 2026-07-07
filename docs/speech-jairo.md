@@ -94,7 +94,7 @@
 > Esto es algo que me gusta especialmente. ARES tiene un sistema de **failover triple**:
 >
 > ```
-> 🥇 NVIDIA NIM → 🥈 Google Gemini → 🥉 Ollama (Local)
+> 🥇 NVIDIA NIM → 🥈 OpenRouter → 🥉 Ollama (Local)
 > ```
 >
 > Intentamos con el mejor servicio disponible. ¿Falló? Sin problema, automáticamente saltamos al siguiente. ¿Falló ese? Usamos uno local.
@@ -158,7 +158,7 @@
 | *¿Por qué no usan directamente ChatGPT?* | Porque necesitamos control sobre el pipeline, los guardrails, la memoria, el RAG y los modos especializados. ChatGPT es genérico; ARES está diseñado para ciberseguridad. |
 | *¿Cómo manejan la concurrencia?* | La memoria de sesión es thread-safe con locks. El rate limiter usa token bucket. FastAPI maneja asyncio para peticiones concurrentes. |
 | *¿Qué pasa si todos los LLM fallan?* | Devolvemos un mensaje claro indicando la situación, pero con el failover triple es extremadamente raro que todos fallen simultáneamente. |
-| *¿Cuánto cuesta mantener los LLM?* | NVIDIA NIM tiene un tier gratuito de 40 RPM. Gemini también tiene capa gratuita. Ollama es completamente local. El costo operativo es mínimo. |
+| *¿Cuánto cuesta mantener los LLM?* | NVIDIA NIM tiene un tier gratuito de 40 RPM. OpenRouter también tiene modelos con capa gratuita. Ollama es completamente local. El costo operativo es mínimo. |
 
 ---
 

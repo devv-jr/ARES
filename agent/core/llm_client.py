@@ -12,10 +12,10 @@ DEFAULT_NIM_MODEL = "meta/llama-3.1-8b-instruct"
 DEFAULT_NIM_TIMEOUT_SECONDS = 35.0
 DEFAULT_NIM_MAX_TOKENS = 512
 
-# --- Gemini (respaldo, desactivado por default) ---
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
-DEFAULT_GEMINI_TIMEOUT_SECONDS = 35.0
-DEFAULT_ALLOW_GEMINI_FALLBACK = False
+# --- OpenRouter (respaldo, desactivado por default) ---
+DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
+DEFAULT_OPENROUTER_TIMEOUT_SECONDS = 35.0
+DEFAULT_ALLOW_OPENROUTER_FALLBACK = False
 
 # --- Ollama (respaldo, desactivado por default) ---
 DEFAULT_HOST = "http://localhost:11434"
@@ -59,13 +59,16 @@ def _get_config() -> dict:
         "nim_model": _strip_env("NIM_MODEL", DEFAULT_NIM_MODEL),
         "nim_timeout_seconds": _float_env("NIM_TIMEOUT_SECONDS", DEFAULT_NIM_TIMEOUT_SECONDS),
         "nim_max_tokens": _int_env("NIM_MAX_TOKENS", DEFAULT_NIM_MAX_TOKENS),
+        "nim_thinking_mode": _bool_env("NIM_THINKING_MODE", False),
 
-        # Gemini
-        "allow_gemini_fallback": _bool_env("ALLOW_GEMINI_FALLBACK", DEFAULT_ALLOW_GEMINI_FALLBACK),
-        "gemini_api_key": _strip_env("GOOGLE_GEMINI_API_KEY") or _strip_env("GEMINI_API_KEY"),
-        "gemini_model": _strip_env("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-        "gemini_timeout_seconds": _float_env(
-            "GEMINI_TIMEOUT_SECONDS", DEFAULT_GEMINI_TIMEOUT_SECONDS
+        # OpenRouter
+        "allow_openrouter_fallback": _bool_env(
+            "ALLOW_OPENROUTER_FALLBACK", DEFAULT_ALLOW_OPENROUTER_FALLBACK
+        ),
+        "openrouter_api_key": _strip_env("OPENROUTER_API_KEY"),
+        "openrouter_model": _strip_env("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL),
+        "openrouter_timeout_seconds": _float_env(
+            "OPENROUTER_TIMEOUT_SECONDS", DEFAULT_OPENROUTER_TIMEOUT_SECONDS
         ),
 
         # Ollama
@@ -100,6 +103,8 @@ def _chat_with_nim(messages: list[dict]) -> str:
         "temperature": 0.4,
         "stream": False,
     }
+    if not config["nim_thinking_mode"] and "deepseek" in config["nim_model"].lower():
+        payload["reasoning_effort"] = "none"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -120,6 +125,8 @@ def _chat_with_nim(messages: list[dict]) -> str:
             raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429).")
         if e.response.status_code == 401:
             raise ConnectionError("NVIDIA NIM rechazó la API key (401). Verifica NIM_API_KEY.")
+        if e.response.status_code == 503:
+            raise ConnectionError("NVIDIA NIM está sobrecargado (503). Intenta de nuevo.")
         raise ConnectionError(f"Error HTTP {e.response.status_code} de NVIDIA NIM.")
     except ValueError:
         raise ConnectionError("Respuesta inesperada de NVIDIA NIM. Revisa el formato de la API.")
@@ -136,86 +143,122 @@ def _chat_with_nim(messages: list[dict]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Gemini
+# OpenRouter (API compatible con OpenAI)
 # ---------------------------------------------------------------------------
 
-def _build_gemini_contents(messages: list[dict]) -> tuple[str, list[dict]]:
-    system_parts = []
-    contents = []
-
-    for message in messages:
-        role = message.get("role", "user")
-        content = message.get("content", "")
-
-        if role == "system":
-            if content:
-                system_parts.append(content)
-            continue
-
-        contents.append(
-            {
-                "role": "model" if role == "assistant" else "user",
-                "parts": [{"text": content}],
-            }
-        )
-
-    return "\n\n".join(system_parts).strip(), contents
-
-
-def _chat_with_gemini(messages: list[dict]) -> str:
+def _chat_with_openrouter(messages: list[dict]) -> str:
     config = _get_config()
-    api_key = config["gemini_api_key"]
+    api_key = config["openrouter_api_key"]
     if not api_key:
-        raise ConnectionError("Gemini no está configurado. Falta GOOGLE_GEMINI_API_KEY o GEMINI_API_KEY.")
+        raise ConnectionError("OpenRouter no está configurado. Falta OPENROUTER_API_KEY.")
 
-    system_instruction, contents = _build_gemini_contents(messages)
-    if not contents:
-        raise ConnectionError("No hay contenido para enviar a Gemini.")
-
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{config['gemini_model']}:generateContent?key={api_key}"
-    )
-
+    url = "https://openrouter.ai/api/v1/chat/completions"
     payload = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": 0.4,
-            "maxOutputTokens": 512,
-        },
+        "model": config["openrouter_model"],
+        "messages": messages,
+        "temperature": 0.4,
+        "max_tokens": 512,
+        "stream": False,
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/devv-jr/ARES",
+        "X-Title": "ARES",
     }
 
-    if system_instruction:
-        payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
-
-    timeout = httpx.Timeout(config["gemini_timeout_seconds"], connect=10.0)
+    timeout = httpx.Timeout(config["openrouter_timeout_seconds"], connect=10.0)
 
     try:
         with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, json=payload)
+            response = client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
     except httpx.TimeoutException:
         raise ConnectionError(
-            f"Gemini no respondió en {int(config['gemini_timeout_seconds'])} segundos."
+            f"OpenRouter no respondió en {int(config['openrouter_timeout_seconds'])} segundos."
         )
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise ConnectionError("Gemini alcanzó su límite de solicitudes (429).")
-        raise ConnectionError(f"Error HTTP {e.response.status_code} de Gemini.")
+            raise ConnectionError("OpenRouter alcanzó su límite de solicitudes (429).")
+        if e.response.status_code == 401:
+            raise ConnectionError("OpenRouter rechazó la API key (401). Verifica OPENROUTER_API_KEY.")
+        if e.response.status_code == 503:
+            raise ConnectionError("OpenRouter está sobrecargado (503). Intenta de nuevo.")
+        raise ConnectionError(f"Error HTTP {e.response.status_code} de OpenRouter.")
     except ValueError:
-        raise ConnectionError("Respuesta inesperada de Gemini. Revisa el formato de la API.")
+        raise ConnectionError("Respuesta inesperada de OpenRouter. Revisa el formato de la API.")
 
-    candidates = data.get("candidates", [])
-    if not candidates:
-        raise ConnectionError("Gemini respondió sin candidatos válidos.")
+    choices = data.get("choices", [])
+    if not choices:
+        raise ConnectionError("OpenRouter respondió sin choices válidos.")
 
-    parts = candidates[0].get("content", {}).get("parts", [])
-    text = "".join(part.get("text", "") for part in parts).strip()
+    text = choices[0].get("message", {}).get("content", "").strip()
     if not text:
-        raise ConnectionError("Gemini no devolvió texto utilizable.")
+        raise ConnectionError("OpenRouter no devolvió texto utilizable.")
 
     return text
+
+
+def _stream_with_openrouter(messages: list[dict]):
+    config = _get_config()
+    api_key = config["openrouter_api_key"]
+    if not api_key:
+        raise ConnectionError("OpenRouter no está configurado. Falta OPENROUTER_API_KEY.")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    payload = {
+        "model": config["openrouter_model"],
+        "messages": messages,
+        "temperature": 0.4,
+        "max_tokens": 512,
+        "stream": True,
+    }
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/devv-jr/ARES",
+        "X-Title": "ARES",
+    }
+
+    try:
+        timeout = httpx.Timeout(config["openrouter_timeout_seconds"], connect=10.0)
+        with httpx.Client(timeout=timeout) as client:
+            with client.stream("POST", url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if not line or not line.startswith("data: "):
+                        continue
+                    data_str = line[len("data: "):].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+                    choices = chunk.get("choices") or []
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield content
+    except httpx.TimeoutException:
+        raise ConnectionError(
+            f"OpenRouter no respondió en {int(config['openrouter_timeout_seconds'])} segundos."
+        )
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 429:
+            raise ConnectionError("OpenRouter alcanzó su límite de solicitudes (429).")
+        if e.response.status_code == 401:
+            raise ConnectionError("OpenRouter rechazó la API key (401). Verifica OPENROUTER_API_KEY.")
+        if e.response.status_code == 503:
+            raise ConnectionError("OpenRouter está sobrecargado (503). Intenta de nuevo.")
+        raise ConnectionError(f"Error HTTP {e.response.status_code} de OpenRouter.")
+    except ConnectionError:
+        raise
+    except Exception as e:
+        raise ConnectionError(f"Error inesperado leyendo el stream de OpenRouter: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -275,9 +318,8 @@ def _chat_with_ollama(messages: list[dict]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Streaming: NIM y Ollama soportan streaming real (chunk por chunk).
-# Gemini se entrega como un solo bloque (no implementamos su endpoint de
-# streaming aquí); si es el proveedor activo, el frontend lo recibe de golpe.
+# Streaming: NIM, OpenRouter y Ollama soportan streaming real (chunk por
+# chunk), ya que las tres APIs son compatibles con el formato de OpenAI.
 # ---------------------------------------------------------------------------
 
 def _stream_with_nim(messages: list[dict]):
@@ -294,6 +336,8 @@ def _stream_with_nim(messages: list[dict]):
         "temperature": 0.4,
         "stream": True,
     }
+    if not config["nim_thinking_mode"] and "deepseek" in config["nim_model"].lower():
+        payload["reasoning_effort"] = "none"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -330,6 +374,8 @@ def _stream_with_nim(messages: list[dict]):
             raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429).")
         if e.response.status_code == 401:
             raise ConnectionError("NVIDIA NIM rechazó la API key (401). Verifica NIM_API_KEY.")
+        if e.response.status_code == 503:
+            raise ConnectionError("NVIDIA NIM está sobrecargado (503). Intenta de nuevo.")
         raise ConnectionError(f"Error HTTP {e.response.status_code} de NVIDIA NIM.")
     except ConnectionError:
         raise
@@ -393,7 +439,7 @@ def _stream_with_ollama(messages: list[dict]):
 def chat_stream(messages: list[dict]):
     """Generador que entrega la respuesta en fragmentos conforme llegan.
 
-    Sigue la misma cadena de prioridad que chat(): NIM -> Gemini (si está
+    Sigue la misma cadena de prioridad que chat(): NIM -> OpenRouter (si está
     activado) -> Ollama (si está activado). Si un proveedor falla antes de
     entregar cualquier fragmento, se intenta el siguiente. Si falla a medio
     stream, lo ya entregado permanece (no se puede "deshacer" en el cliente).
@@ -415,15 +461,20 @@ def chat_stream(messages: list[dict]):
     else:
         errors.append("NIM: no configurado (falta NIM_API_KEY).")
 
-    if config["allow_gemini_fallback"]:
-        if config["gemini_api_key"]:
+    if config["allow_openrouter_fallback"]:
+        if config["openrouter_api_key"]:
             try:
-                yield _chat_with_gemini(messages)
-                return
+                delivered = False
+                for piece in _stream_with_openrouter(messages):
+                    delivered = True
+                    yield piece
+                if delivered:
+                    return
+                errors.append("OpenRouter: no entregó contenido.")
             except ConnectionError as exc:
-                errors.append(f"Gemini: {exc}")
+                errors.append(f"OpenRouter: {exc}")
         else:
-            errors.append("Gemini: fallback activado pero falta GEMINI_API_KEY.")
+            errors.append("OpenRouter: fallback activado pero falta OPENROUTER_API_KEY.")
 
     if config["allow_ollama_fallback"]:
         try:
@@ -443,7 +494,7 @@ def chat_stream(messages: list[dict]):
 
 
 # ---------------------------------------------------------------------------
-# Orquestación: NIM -> Gemini (opcional) -> Ollama (opcional)
+# Orquestación: NIM -> OpenRouter (opcional) -> Ollama (opcional)
 # ---------------------------------------------------------------------------
 
 def chat(messages: list[dict]) -> str:
@@ -459,15 +510,15 @@ def chat(messages: list[dict]) -> str:
     else:
         errors.append("NIM: no configurado (falta NIM_API_KEY).")
 
-    # 2. Gemini (respaldo, requiere activación explícita)
-    if config["allow_gemini_fallback"]:
-        if config["gemini_api_key"]:
+    # 2. OpenRouter (respaldo, requiere activación explícita)
+    if config["allow_openrouter_fallback"]:
+        if config["openrouter_api_key"]:
             try:
-                return _chat_with_gemini(messages)
+                return _chat_with_openrouter(messages)
             except ConnectionError as exc:
-                errors.append(f"Gemini: {exc}")
+                errors.append(f"OpenRouter: {exc}")
         else:
-            errors.append("Gemini: fallback activado pero falta GEMINI_API_KEY.")
+            errors.append("OpenRouter: fallback activado pero falta OPENROUTER_API_KEY.")
 
     # 3. Ollama (respaldo, requiere activación explícita)
     if config["allow_ollama_fallback"]:
@@ -487,7 +538,7 @@ def check_connection() -> bool:
     if config["nim_api_key"]:
         return True
 
-    if config["allow_gemini_fallback"] and config["gemini_api_key"]:
+    if config["allow_openrouter_fallback"] and config["openrouter_api_key"]:
         return True
 
     if config["allow_ollama_fallback"]:
