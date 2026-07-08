@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import { Terminal } from "xterm"
-import { FitAddon } from "xterm-addon-fit"
+import { Terminal } from "@xterm/xterm"
+import { FitAddon } from "@xterm/addon-fit"
 import { io } from "socket.io-client"
-import "xterm/css/xterm.css"
+import "@xterm/xterm/css/xterm.css"
 
 const TERMINAL_SERVER_URL = process.env.NEXT_PUBLIC_TERMINAL_SERVER_URL || "http://localhost:4000"
 
