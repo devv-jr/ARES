@@ -115,19 +115,10 @@ pip install -r requirements.txt
 Una vez instaladas las dependencias, levanta el agente:
 
 ```bash
-python main.py
+uvicorn main:app --reload
 ```
 
 ![Agente ARES iniciando](assets/install_04_run_agent.gif)
-
-Si todo salió bien, verás el mismo boot sequence del proyecto:
-
-```
-> Inicializando ARES...
-> Cargando módulos de seguridad... [OK]
-> Conectando con servicios de IA... [OK]
-> Agente listo para operar.
-```
 
 El backend quedará escuchando en `http://localhost:8000` por defecto.
 
@@ -146,29 +137,28 @@ cp .env.example .env
 Variables clave a revisar:
 
 ```env
-# Servicios de IA
-AI_API_KEY=your_api_key_here
-AI_MODEL=claude-sonnet-4-6
+# NIM (Servicio de LLMs de NVIDIA NIM)
+NIM_API_KEY=nvapi-xxxxxxxxxxxxx              # Aqui colocas la API KEY que obtienes de https://build.nvidia.com/settings/api-keys
+NIM_MODEL=meta/llama-3.1-8b-instruct
+NIM_TIMEOUT_SECONDS=35
+NIM_MAX_TOKENS=512
 
-# Backend
-BACKEND_HOST=0.0.0.0
-BACKEND_PORT=8000
-DEBUG=false
-
-# Fallback: OpenRouter
+# OpenRouter (respaldo, desactivado por default)
 ALLOW_OPENROUTER_FALLBACK=false
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_API_KEY=tu_key_aqui               # Aqui colocas la API KEY que obtienes de https://openrouter.ai/workspaces/default/keys
+OPENROUTER_MODEL=openrouter/auto
+OPENROUTER_TIMEOUT_SECONDS=35
 
-# Fallback: Ollama (local)
+# Ollama (respaldo, desactivado por default)
 ALLOW_OLLAMA_FALLBACK=false
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=qwen3.5:4b
 
-# Mobile (Expo)
-EXPO_PUBLIC_API_URL=http://localhost:8000
+# ARES — Motor del Agente
+ARES_MAX_CONTEXT_CHARS=2000
+ARES_MAX_HISTORY_TURNS=3
+ARES_RPM_LIMIT=35
 ```
 
-> ⚠️ **Nunca subas tu `.env` a GitHub.** Ya está incluido en `.gitignore`.
+> ⚠️⚠️ **Nunca subas tu `.env` a GitHub.** Ya está incluido en `.gitignore`. ⚠️⚠️
 
 ---
 
@@ -178,8 +168,8 @@ Este microservicio provee la terminal interactiva real (xterm.js + node-pty) que
 
 ```bash
 cd terminal-server
-npm i
-node server.js
+pnpm install
+pnpm start
 ```
 
 ![Levantando el terminal-server](assets/install_06_terminal_server.gif)
@@ -192,7 +182,7 @@ Por defecto queda expuesto en el puerto `4000`.
 
 ```bash
 cd frontend
-pnpm i
+pnpm install
 pnpm dev
 ```
 
@@ -214,8 +204,8 @@ Resumen del flujo de instalación:
 
 | Servicio | Puerto | Comando |
 |---|---|---|
-| Backend / Agente | `8000` | `python main.py` |
-| Terminal Server | `4000` | `node server.js` |
+| Backend / Agente | `8000` | `uvicorn main:app --reload` |
+| Terminal Server | `4000` | `pnpm start` |
 | Frontend (Next.js) | `3000` | `pnpm dev` |
 
 ---
@@ -246,8 +236,8 @@ curl http://localhost:8000/health
 
 | Problema | Causa probable | Solución |
 |---|---|---|
-| `ModuleNotFoundError` en `agent/` | Entorno virtual no activado | `source venv/bin/activate` antes de correr `main.py` |
-| Terminal no conecta (xterm.js) | `terminal-server` no está corriendo | Verifica `node server.js` en el puerto `4000` |
+| `ModuleNotFoundError` en `agent/` | Entorno virtual no activado | `source venv/bin/activate` antes de correr `uvicorn main:app --reload` |
+| Terminal no conecta (xterm.js) | `terminal-server` no está corriendo | Verifica `pnpm start` en el puerto `4000` |
 | El agente no responde | Falta `AI_API_KEY` en `.env` | Completa la clave del proveedor primario (NVIDIA NIM) |
 | Error de CORS en el frontend | `EXPO_PUBLIC_API_URL` / URL de backend mal configurada | Revisa que apunte a `http://localhost:8000` |
 | `pnpm: command not found` | pnpm no instalado globalmente | `npm install -g pnpm` |
