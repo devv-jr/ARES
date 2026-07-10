@@ -202,7 +202,7 @@ ARES_RPM_LIMIT=35
 
 ```
 ARES/
-├── 🌐 frontend/               # Web App React + Vite (PWA)
+├── 🌐 frontend/               # Web App React + Next.js (PWA)
 │   ├── src/
 │   │   ├── pages/              # Vistas principales
 │   │   ├── components/         # Componentes reutilizables
