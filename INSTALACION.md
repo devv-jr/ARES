@@ -114,7 +114,7 @@ pip install -r requirements.txt
 Una vez instaladas las dependencias, levanta el agente:
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 ![Agente ARES iniciando](assets/install_04_run_agent.gif)
