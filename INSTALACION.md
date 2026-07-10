@@ -43,8 +43,7 @@
 - [1. Clonar el repositorio](#1-clonar-el-repositorio)
 - [2. Backend del agente (Python)](#2-backend-del-agente-python)
 - [3. Variables de entorno](#3-variables-de-entorno)
-- [4. Terminal Server (Node.js)](#4-terminal-server-nodejs)
-- [5. Frontend (React + Next.js)](#5-frontend-react--nextjs)
+- [4. Frontend (React + Next.js)](#4-frontend-react--nextjs)
 - [Arquitectura resultante](#arquitectura-resultante)
 - [Verificación rápida](#verificación-rápida)
 - [Solución de problemas](#solución-de-problemas)
@@ -88,7 +87,7 @@ ARES/
 ├── 🌐 frontend/          # Web App React + Next.js (PWA)
 ├── 💻 backend/           # API REST (FastAPI)
 ├── 🤖 agent/             # Módulo del agente de IA + LLM
-├── 🖥️  terminal-server/   # Microservicio de terminal (xterm.js + node-pty)
+
 ├── 📄 docs/              # Documentación técnica
 ├── .env.example
 ├── requirements.txt
@@ -162,23 +161,7 @@ ARES_RPM_LIMIT=35
 
 ---
 
-## `~/paso-4` 4. Terminal Server (Node.js)
-
-Este microservicio provee la terminal interactiva real (xterm.js + node-pty) que usa el `MissionConsole` del dashboard, comunicada vía Socket.IO.
-
-```bash
-cd terminal-server
-pnpm install
-pnpm start
-```
-
-![Levantando el terminal-server](assets/install_06_terminal_server.gif)
-
-Por defecto queda expuesto en el puerto `4000`.
-
----
-
-## `~/paso-5` 5. Frontend (React + Next.js)
+## `~/paso-4` 4. Frontend (React + Next.js)
 
 ```bash
 cd frontend
@@ -194,7 +177,7 @@ La aplicación quedará disponible en `http://localhost:3000`.
 
 ## `~/arquitectura` Arquitectura resultante
 
-Tras completar los 5 pasos, tendrás los tres servicios corriendo en conjunto:
+Tras completar los pasos, tendrás los servicios corriendo en conjunto:
 
 ![Arquitectura del sistema ARES](assets/architecture.png)
 
@@ -203,9 +186,8 @@ Resumen del flujo de instalación:
 ![Flujo de instalación](assets/install_flow.png)
 
 | Servicio | Puerto | Comando |
-|---|---|---|
+|---|---|---|---|
 | Backend / Agente | `8000` | `uvicorn main:app --reload` |
-| Terminal Server | `4000` | `pnpm start` |
 | Frontend (Next.js) | `3000` | `pnpm dev` |
 
 ---
@@ -217,7 +199,6 @@ Resumen del flujo de instalación:
 │  CHECKLIST DE INSTALACIÓN                    │
 ├───────────────────────────────┬─────────────┤
 │  Backend responde en :8000     │   [ ]       │
-│  Terminal server activo :4000  │   [ ]       │
 │  Frontend carga en :3000       │   [ ]       │
 │  .env configurado              │   [ ]       │
 │  Chat responde a un mensaje    │   [ ]       │
@@ -237,7 +218,6 @@ curl http://localhost:8000/health
 | Problema | Causa probable | Solución |
 |---|---|---|
 | `ModuleNotFoundError` en `agent/` | Entorno virtual no activado | `source venv/bin/activate` antes de correr `uvicorn main:app --reload` |
-| Terminal no conecta (xterm.js) | `terminal-server` no está corriendo | Verifica `pnpm start` en el puerto `4000` |
 | El agente no responde | Falta `AI_API_KEY` en `.env` | Completa la clave del proveedor primario (NVIDIA NIM) |
 | Error de CORS en el frontend | `EXPO_PUBLIC_API_URL` / URL de backend mal configurada | Revisa que apunte a `http://localhost:8000` |
 | `pnpm: command not found` | pnpm no instalado globalmente | `npm install -g pnpm` |

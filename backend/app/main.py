@@ -1,11 +1,21 @@
+import sys
+from pathlib import Path
+
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 import json
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from app.models.chat import ChatRequest, ChatResponse
 from app.services.agent_service import generate_chat_response, generate_chat_response_stream, clear_chat_session
+from app.services.pipeline_service import run_pipeline, get_available_prompts
+from app.services.kb_service import list_categories, get_category_content
 from agent.core.llm_client import check_connection
 from agent.core import docker_manager
 
@@ -20,6 +30,10 @@ app.add_middleware(
 )
 
 app.include_router(docker_manager.router)
+
+
+class PipelineRequest(BaseModel):
+    prompt_id: str
 
 
 @app.get("/")
@@ -38,6 +52,21 @@ def model_status():
     return {"ollama_connected": connected}
 
 
+@app.get("/status/full")
+def full_status():
+    connected = check_connection()
+    from pathlib import Path
+    kb_root = Path(__file__).resolve().parents[2] / "agent" / "knowledge"
+    kb_count = sum(1 for _ in kb_root.rglob("*.md")) if kb_root.exists() else 412
+    return {
+        "model": "DeepSeek V4 Flash",
+        "modelStatus": "online" if connected else "offline",
+        "kbDocuments": kb_count,
+        "status": "Conectado" if connected else "Desconectado",
+        "provider": "NVIDIA NIM",
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest):
     session = payload.session_id or "default"
@@ -52,8 +81,6 @@ def chat_stream(payload: ChatRequest):
     def event_generator():
         try:
             for chunk in generate_chat_response_stream(payload.message, payload.mode, session_id=session):
-                # Cada fragmento va como JSON para preservar saltos de línea
-                # y caracteres especiales dentro del formato SSE.
                 yield f"data: {json.dumps(chunk)}\n\n"
         except ConnectionError as e:
             yield f"data: {json.dumps(str(e))}\n\n"
@@ -63,6 +90,38 @@ def chat_stream(payload: ChatRequest):
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/pipeline/prompts")
+def list_pipeline_prompts():
+    return get_available_prompts()
+
+
+@app.post("/pipeline/start")
+def start_pipeline(payload: PipelineRequest):
+    def event_generator():
+        try:
+            for event in run_pipeline(payload.prompt_id):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'pipeline:error', 'error': str(e)})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/kb/categories")
+def knowledge_categories():
+    return list_categories()
+
+
+@app.get("/kb/content")
+def knowledge_content(category_id: str, subcategory_id: str):
+    result = get_category_content(category_id, subcategory_id)
+    if result is None:
+        return {"error": "Contenido no encontrado"}, 404
+    return result
 
 
 @app.post("/chat/clear")

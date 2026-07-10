@@ -103,8 +103,6 @@ def _chat_with_nim(messages: list[dict]) -> str:
         "temperature": 0.4,
         "stream": False,
     }
-    if not config["nim_thinking_mode"] and "deepseek" in config["nim_model"].lower():
-        payload["reasoning_effort"] = "none"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -336,8 +334,6 @@ def _stream_with_nim(messages: list[dict]):
         "temperature": 0.4,
         "stream": True,
     }
-    if not config["nim_thinking_mode"] and "deepseek" in config["nim_model"].lower():
-        payload["reasoning_effort"] = "none"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -448,16 +444,22 @@ def chat_stream(messages: list[dict]):
     errors = []
 
     if config["nim_api_key"]:
-        try:
-            delivered = False
-            for piece in _stream_with_nim(messages):
-                delivered = True
-                yield piece
-            if delivered:
-                return
-            errors.append("NIM: no entregó contenido.")
-        except ConnectionError as exc:
-            errors.append(f"NIM: {exc}")
+        nim_attempts = 0
+        while nim_attempts < 2:
+            nim_attempts += 1
+            try:
+                delivered = False
+                for piece in _stream_with_nim(messages):
+                    delivered = True
+                    yield piece
+                if delivered:
+                    return
+                errors.append("NIM: no entregó contenido.")
+                break
+            except ConnectionError as exc:
+                errors.append(f"NIM: {exc}")
+                if nim_attempts >= 2:
+                    break
     else:
         errors.append("NIM: no configurado (falta NIM_API_KEY).")
 
@@ -503,10 +505,15 @@ def chat(messages: list[dict]) -> str:
 
     # 1. NVIDIA NIM (opción principal)
     if config["nim_api_key"]:
-        try:
-            return _chat_with_nim(messages)
-        except ConnectionError as exc:
-            errors.append(f"NIM: {exc}")
+        nim_attempts = 0
+        while nim_attempts < 2:
+            nim_attempts += 1
+            try:
+                return _chat_with_nim(messages)
+            except ConnectionError as exc:
+                errors.append(f"NIM: {exc}")
+                if nim_attempts >= 2:
+                    break
     else:
         errors.append("NIM: no configurado (falta NIM_API_KEY).")
 

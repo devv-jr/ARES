@@ -10,10 +10,7 @@ Flujo esperado:
   1. Frontend pide iniciar un escenario -> POST /api/vulhub/start
   2. Este módulo hace `docker compose up -d` en la carpeta del escenario
   3. Devuelve el container_id/name del servicio "vulnerable"
-  4. El frontend usa ese container_id para conectar TerminalConsole
-     (que a su vez le pasa containerId al terminal-server, que hace
-     `docker exec -it <container> bash`)
-  5. Al terminar -> POST /api/vulhub/stop -> `docker compose down`
+  4. Al terminar -> POST /api/vulhub/stop -> `docker compose down`
 
 Integra esto en tu main.py existente con:
     from ares.core import docker_manager

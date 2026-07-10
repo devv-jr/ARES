@@ -6,7 +6,6 @@ export const metadata = {
   title: 'ARES — IA Agéntica de Ciberseguridad',
   description:
     'Dashboard táctico de ARES: inteligencia de amenazas, análisis de malware y desarrollo seguro.',
-  generator: 'v0.app',
   icons: {
     icon: [
       {

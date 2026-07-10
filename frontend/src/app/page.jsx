@@ -2,17 +2,16 @@
 
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ShieldAlert, FileSearch, ShieldCheck } from "lucide-react"
 
 import { API_URL } from "../lib/constants"
 import Sidebar from "../components/Sidebar"
 import TopNav from "../components/TopNav"
 import AiCore from "../components/AiCore"
 import InputArea from "../components/InputArea"
-import FeatureCard from "../components/FeatureCard"
 import ChatLog from "../components/ChatLog"
-import MissionConsole from "../components/MissionConsole"
 import OpsPanel from "../components/OpsPanel"
+import StatusPanel from "../components/StatusPanel"
+import KnowledgeBaseView from "../components/KnowledgeBaseView"
 
 export default function AresDashboard() {
   const [input, setInput] = useState("")
@@ -24,7 +23,6 @@ export default function AresDashboard() {
   const [activeSection, setActiveSection] = useState("chat")
   const [dashboardOpen, setDashboardOpen] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
-  const [activeContainerId, setActiveContainerId] = useState(null)
   const topNavRef = useRef(null)
   const sessionIdRef = useRef(typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "default")
 
@@ -194,44 +192,6 @@ export default function AresDashboard() {
     setModeMenuOpen(false)
   }
 
-  const features = [
-    {
-      icon: ShieldAlert,
-      tag: "Threat Intel",
-      title: "Inteligencia de Amenazas",
-      description:
-        "Correlaciona IoCs en tiempo real y prioriza alertas críticas del perímetro.",
-    },
-    {
-      icon: FileSearch,
-      tag: "Malware",
-      title: "Análisis de Malware",
-      description:
-        "Desensambla binarios sospechosos y genera un informe de comportamiento.",
-    },
-    {
-      icon: ShieldCheck,
-      tag: "SecDev",
-      title: "Asistente de Desarrollo Seguro",
-      description:
-        "Audita tu código en busca de vulnerabilidades y sugiere correcciones.",
-    },
-  ]
-
-  const cardContainerVariants = {
-    hidden: {},
-    show: {
-      transition: {
-        staggerChildren: 0.15,
-      },
-    },
-  }
-
-  const cardItemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    show: { opacity: 1, y: 0 },
-  }
-
   return (
     <div className="dark flex h-screen w-full overflow-hidden bg-cover bg-center bg-no-repeat text-zinc-100" style={{ backgroundImage: 'url(/bg.png)' }}>
       <AnimatePresence>
@@ -332,48 +292,28 @@ export default function AresDashboard() {
                     transition={{ duration: 0.5, delay: 0.3 }}
                     className="mt-8 flex justify-center px-2 pb-8"
                   >
-                    <motion.div
-                      className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3"
-                      variants={cardContainerVariants}
-                      initial="hidden"
-                      animate="show"
-                    >
-                      {features.map((f) => (
-                        <motion.div key={f.title} variants={cardItemVariants}>
-                          <FeatureCard {...f} />
-                        </motion.div>
-                      ))}
-                    </motion.div>
+                    <StatusPanel mode={selectedMode} />
                   </motion.div>
                 )}
               </>
             )}
 
+            {dashboardOpen && activeSection === "kb" && (
+              <div className="flex flex-col items-center flex-1 overflow-y-auto px-6 py-4">
+                <KnowledgeBaseView />
+              </div>
+            )}
+
             {dashboardOpen && activeSection === "console" && (
               <div className="flex flex-col items-center">
-                <OpsPanel
-                  chatProps={{ messages, input, setInput, handleSend, loading, error }}
-                  containerId={activeContainerId} // null/undefined = shell local
-                  targetIp={activeContainerId ? "172.20.0.4" : undefined}
-                />
+                <OpsPanel />
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.3 }}
                   className="mt-8 flex justify-center px-2 pb-8"
                 >
-                  <motion.div
-                    className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3"
-                    variants={cardContainerVariants}
-                    initial="hidden"
-                    animate="show"
-                  >
-                    {features.map((f) => (
-                      <motion.div key={f.title} variants={cardItemVariants}>
-                        <FeatureCard {...f} />
-                      </motion.div>
-                    ))}
-                  </motion.div>
+                  <StatusPanel mode={selectedMode} />
                 </motion.div>
               </div>
             )}

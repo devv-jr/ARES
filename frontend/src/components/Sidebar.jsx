@@ -2,7 +2,7 @@ import {
   Plus,
   MessageSquare,
   FolderArchive,
-  Terminal,
+  ScrollText,
   FlaskConical,
   BookOpen,
   Wrench,
@@ -38,7 +38,7 @@ export default function Sidebar({ onNewSession, activeSection, onSectionChange }
   const items = [
     { id: "chat", icon: MessageSquare, label: "Chat" },
     { id: "lab", icon: FlaskConical, label: "Laboratorio" },
-    { id: "console", icon: Terminal, label: "Mission Console" },
+    { id: "console", icon: ScrollText, label: "PLAYBOOKS" },
     { id: "evidencias", icon: FolderArchive, label: "Evidencias" },
     { id: "kb", icon: BookOpen, label: "Knowledge Base" },
     { id: "tools", icon: Wrench, label: "Herramientas" },
