@@ -39,7 +39,7 @@
 
 ## `~/` ¿Qué es ARES?
 
-**ARES** es una solución de inteligencia artificial agéntica enfocada en ciberseguridad, diseñada para actuar como asistente técnico accesible desde dispositivos móviles.
+**ARES** es una solución de inteligencia artificial agéntica enfocada en ciberseguridad, diseñada para actuar como asistente técnico accesible desde una página web.
 
 El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas, orienta procesos de aprendizaje y ofrece recomendaciones especializadas en seguridad informática, todo a través de una interfaz conversacional impulsada por agentes de IA.
 
@@ -137,7 +137,7 @@ git clone https://github.com/devv-jr/ARES.git
 cd ARES
 ```
 
-### Web App (React + Vite)
+### Web App (Next.js)
 
 ```bash
 cd frontend
@@ -145,10 +145,10 @@ pnpm i
 pnpm dev
 ```
 
-### Backend del agente (Python)
+### Backend y el agente (Python)
 
 ```bash
-cd agent
+cd backend
 python -m venv venv
 source venv/bin/activate      # Linux/macOS
 # venv\Scripts\activate       # Windows
@@ -166,7 +166,7 @@ cp .env.example .env
 ### Levantar el agente
 
 ```bash
-python main.py
+uvicorn app.main:app --reload
 ```
 
 ---
@@ -175,33 +175,25 @@ python main.py
 
 ```env
 # Servicios de IA
-AI_API_KEY=your_api_key_here
-AI_MODEL=claude-sonnet-4-6        # o el modelo de tu elección
+# NIM (principal — se usa si tiene key, sin flag adicional)
+NIM_API_KEY=nvapi-xxxxxxxxxxxxxxxx
+NIM_MODEL=deepseek-ai/deepseek-v4-flash
+NIM_TIMEOUT_SECONDS=35
+NIM_MAX_TOKENS=512
 
-# Backend
-BACKEND_HOST=0.0.0.0
-BACKEND_PORT=8000
-DEBUG=false
-
-# OpenRouter
+# OpenRouter (respaldo, desactivado por default)
 ALLOW_OPENROUTER_FALLBACK=false
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_API_KEY=tu_key_aqui
 OPENROUTER_MODEL=openrouter/auto
 OPENROUTER_TIMEOUT_SECONDS=35
 
-# Ollama
+# Ollama (respaldo, desactivado por default)
 ALLOW_OLLAMA_FALLBACK=false
-OLLAMA_HOST=http://localhost:11434
-OLLAMA_MODEL=qwen3.5:4b
-OLLAMA_TIMEOUT_SECONDS=45
-OLLAMA_CONNECT_TIMEOUT_SECONDS=10
-OLLAMA_KEEP_ALIVE=10m
-OLLAMA_NUM_PREDICT=192
-OLLAMA_NUM_CTX=2048
-ARES_MAX_CONTEXT_CHARS=3500
 
-# Mobile (expo)
-EXPO_PUBLIC_API_URL=http://localhost:8000
+# ARES — Motor del Agente
+ARES_MAX_CONTEXT_CHARS=2000
+ARES_MAX_HISTORY_TURNS=3
+ARES_RPM_LIMIT=35
 ```
 
 ---
