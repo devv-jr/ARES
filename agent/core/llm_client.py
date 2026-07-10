@@ -455,7 +455,7 @@ def chat_stream(messages: list[dict]):
                 if delivered:
                     return
                 errors.append("NIM: no entregó contenido.")
-                break
+                continue
             except ConnectionError as exc:
                 errors.append(f"NIM: {exc}")
                 if nim_attempts >= 2:

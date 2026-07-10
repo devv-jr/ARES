@@ -233,48 +233,50 @@ export default function AresDashboard() {
             )}
           </AnimatePresence>
 
-          <div className="flex flex-1 flex-col overflow-y-auto px-6 py-8">
-            <div className="flex flex-1 flex-col">
-              <AnimatePresence mode="wait">
-                {!dashboardOpen ? (
-                  <motion.div
-                    key="hero"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.4 }}
-                    className="relative flex flex-1 flex-col items-center justify-center gap-6"
-                  >
-                    <div className="ares-beam pointer-events-none absolute bottom-0 left-1/2 h-48 w-[36rem] max-w-[90vw] -translate-x-1/2 translate-y-1/3" />
-
+          <div className={`flex flex-1 flex-col overflow-y-auto ${activeSection === "kb" ? "px-6" : "px-6 py-8"}`}>
+            {activeSection !== "kb" && activeSection !== "console" && (
+              <div className="flex flex-1 flex-col">
+                <AnimatePresence mode="wait">
+                  {!dashboardOpen ? (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className="relative z-10"
+                      key="hero"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.4 }}
+                      className="relative flex flex-1 flex-col items-center justify-center gap-6"
                     >
-                      <AiCore onClick={handleOrbeClick} />
+                      <div className="ares-beam pointer-events-none absolute bottom-0 left-1/2 h-48 w-[36rem] max-w-[90vw] -translate-x-1/2 translate-y-1/3" />
+
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="relative z-10"
+                      >
+                        <AiCore onClick={handleOrbeClick} />
+                      </motion.div>
+                      <motion.h1
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+                        className="ares-hero-title relative z-10 text-balance text-center text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl"
+                      >
+                        {"\u00bf"}Qu{"\u00e9"} vamos a auditar hoy?
+                      </motion.h1>
                     </motion.div>
-                    <motion.h1
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-                      className="ares-hero-title relative z-10 text-balance text-center text-3xl font-bold tracking-tight text-zinc-50 sm:text-4xl"
-                    >
-                      {"\u00bf"}Qu{"\u00e9"} vamos a auditar hoy?
-                    </motion.h1>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="dashboard"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.3 }}
-                    className="flex-1"
-                  />
-                )}
-              </AnimatePresence>
-            </div>
+                  ) : (
+                    <motion.div
+                      key="dashboard"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.3 }}
+                      className="flex-1"
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             {dashboardOpen && activeSection === "chat" && (
               <>
@@ -299,13 +301,13 @@ export default function AresDashboard() {
             )}
 
             {dashboardOpen && activeSection === "kb" && (
-              <div className="flex flex-col items-center flex-1 overflow-y-auto px-6 py-4">
+              <div className="flex flex-col items-center flex-1 justify-center overflow-y-auto pt-12">
                 <KnowledgeBaseView />
               </div>
             )}
 
             {dashboardOpen && activeSection === "console" && (
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center pt-8">
                 <OpsPanel />
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}

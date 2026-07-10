@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, ChevronRight, BookOpen, Shield, Terminal, Monitor, Code, Bug, Layers, ShieldCheck, Flame, Search, FileText } from "lucide-react"
+import Icon3D, { ICON_PALETTES } from "./Icon3D"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -189,35 +190,37 @@ export default function KnowledgeBaseView() {
 
       <div className="border-x border-b border-zinc-800 rounded-b-lg bg-black/60">
         <div className="flex flex-col lg:flex-row">
-          <div className="lg:w-72 border-r border-zinc-800/60 p-3 max-h-[520px] overflow-y-auto">
+          <div className="lg:w-80 border-r border-zinc-800/60 p-3 max-h-[520px] overflow-y-auto">
             <div className="flex flex-col gap-1">
               {filteredCategories.map((cat) => {
                 const Icon = ICON_MAP[cat.icon] || BookOpen
                 const color = COLOR_MAP[cat.id] || "text-zinc-400"
                 const hover = BG_MAP[cat.id] || "hover:border-zinc-700"
+                const palette = ICON_PALETTES[cat.id] || ICON_PALETTES.default
+                const isActive = activeCategory?.id === cat.id
                 return (
                   <div key={cat.id}>
                     <motion.button
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       onClick={() => handleCategoryClick(cat)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-all border ${
-                        activeCategory?.id === cat.id
+                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs transition-all border ${
+                        isActive
                           ? `${color} bg-zinc-900/80`
                           : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-zinc-900/40"
-                      } ${activeCategory?.id === cat.id ? "" : hover}`}
+                      } ${isActive ? "" : hover}`}
                     >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <Icon3D icon={Icon} palette={palette} active={isActive} size="h-8 w-8" iconSize="h-4 w-4" />
                       <span className="font-semibold tracking-wider">{cat.name}</span>
                       <ChevronRight
-                        className={`h-3 w-3 ml-auto transition-transform ${
-                          activeCategory?.id === cat.id ? "rotate-90" : ""
+                        className={`h-3 w-3 ml-auto shrink-0 transition-transform ${
+                          isActive ? "rotate-90" : ""
                         }`}
                       />
                     </motion.button>
 
                     <AnimatePresence>
-                      {activeCategory?.id === cat.id && cat.subcategories.length > 0 && (
+                      {isActive && cat.subcategories.length > 0 && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
@@ -258,8 +261,15 @@ export default function KnowledgeBaseView() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="h-3.5 w-3.5 text-green-400" />
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Icon3D
+                    icon={FileText}
+                    palette={ICON_PALETTES[activeCategory?.id] || ICON_PALETTES.default}
+                    active
+                    size="h-7 w-7"
+                    iconSize="h-3.5 w-3.5"
+                    rounded="rounded-lg"
+                  />
                   <span className="text-xs text-zinc-500">{content.category}</span>
                   <ChevronRight className="h-3 w-3 text-zinc-700" />
                   <span className="text-sm font-semibold text-zinc-200">{content.title}</span>
@@ -271,7 +281,7 @@ export default function KnowledgeBaseView() {
               </motion.div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <BookOpen className="h-8 w-8 text-zinc-700 mb-2" />
+                <Icon3D icon={BookOpen} palette={ICON_PALETTES.default} size="h-14 w-14" iconSize="h-6 w-6" className="mb-3" />
                 <p className="text-sm text-zinc-600">Selecciona una categoría y un tema</p>
                 <p className="text-[10px] text-zinc-700 mt-1">
                   {categories.length} categorías con recursos de ciberseguridad

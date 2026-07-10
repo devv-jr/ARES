@@ -102,6 +102,56 @@ PROMPTS = [
         ],
     },
     {
+        "id": "playbook-04",
+        "title": "PLAYBOOK 04",
+        "subtitle": "Reconocimiento Remoto",
+        "description": "Escanea un host remoto: verifica conectividad, enumera puertos, tecnologías web y genera un análisis con IA.",
+        "icon": "Radio",
+        "color": "emerald",
+        "badge": "Remoto",
+        "duration": "90 s",
+        "tools": ["Ping", "Nmap", "WhatWeb"],
+        "requires_target": True,
+        "steps": [
+            {
+                "id": "ping",
+                "name": "Ping",
+                "description": "Verifica que el host objetivo responda",
+                "type": "ping",
+                "config": {"timeout": 10},
+            },
+            {
+                "id": "nmap-fast",
+                "name": "Escaneo de puertos (rápido)",
+                "description": "Nmap para descubrir puertos y servicios abiertos",
+                "type": "command",
+                "config": {
+                    "command": ["nmap", "-sV", "-T4", "--open", "-p", "1-1000", "{TARGET_IP}"],
+                    "timeout": 120,
+                },
+            },
+            {
+                "id": "whatweb",
+                "name": "Enumeración web",
+                "description": "WhatWeb identifica tecnologías del servidor web",
+                "type": "command",
+                "config": {
+                    "command": ["whatweb", "-a", "1", "{TARGET_IP}"],
+                    "timeout": 60,
+                },
+            },
+            {
+                "id": "analyze",
+                "name": "Análisis con IA",
+                "description": "ARES interpreta los resultados y genera recomendaciones",
+                "type": "llm_analyze",
+                "config": {
+                    "prompt_template": "Eres un analista de ciberseguridad. Analiza estos resultados de reconocimiento contra {TARGET_IP} y proporciona:\n1. Puertos/servicios encontrados\n2. Posibles vulnerabilidades\n3. Recomendaciones de mitigación\n4. Próximos pasos para un pentest más profundo\n\nResultados:\n{STEP_OUTPUT}",
+                },
+            },
+        ],
+    },
+    {
         "id": "playbook-03",
         "title": "PLAYBOOK 03",
         "subtitle": "Apache Path Traversal Demo",
@@ -179,6 +229,7 @@ def list_prompts() -> list[dict]:
             "badge": p.get("badge", ""),
             "duration": p.get("duration", ""),
             "tools": p.get("tools", []),
+            "steps": [{"id": s["id"], "name": s["name"], "description": s.get("description", "")} for s in p.get("steps", [])],
         }
         for p in PROMPTS
     ]

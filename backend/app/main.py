@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Optional
 
 _REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if _REPO_ROOT not in sys.path:
@@ -34,6 +35,7 @@ app.include_router(docker_manager.router)
 
 class PipelineRequest(BaseModel):
     prompt_id: str
+    target: Optional[str] = None
 
 
 @app.get("/")
@@ -101,7 +103,7 @@ def list_pipeline_prompts():
 def start_pipeline(payload: PipelineRequest):
     def event_generator():
         try:
-            for event in run_pipeline(payload.prompt_id):
+            for event in run_pipeline(payload.prompt_id, target=payload.target):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'pipeline:error', 'error': str(e)})}\n\n"

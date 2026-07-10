@@ -10,7 +10,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 
-function SidebarNavItem({ icon: Icon, label, active, onClick }) {
+function SidebarNavItem({ icon: Icon, label, prefix, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -20,8 +20,11 @@ function SidebarNavItem({ icon: Icon, label, active, onClick }) {
           : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
       }`}
     >
+      <span className="w-5 text-right text-[11px] font-bold text-zinc-700 group-hover:text-zinc-500 transition-colors select-none">
+        {prefix}
+      </span>
       <Icon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{label}</span>
+      <span className="truncate uppercase tracking-wider">{label}</span>
     </button>
   )
 }
@@ -36,12 +39,12 @@ function SectionLabel({ children }) {
 
 export default function Sidebar({ onNewSession, activeSection, onSectionChange }) {
   const items = [
-    { id: "chat", icon: MessageSquare, label: "Chat" },
-    { id: "lab", icon: FlaskConical, label: "Laboratorio" },
-    { id: "console", icon: ScrollText, label: "PLAYBOOKS" },
-    { id: "evidencias", icon: FolderArchive, label: "Evidencias" },
-    { id: "kb", icon: BookOpen, label: "Knowledge Base" },
-    { id: "tools", icon: Wrench, label: "Herramientas" },
+    { id: "chat", icon: MessageSquare, label: "Chat", prefix: ">_" },
+    { id: "lab", icon: FlaskConical, label: "Laboratorio", prefix: "$_" },
+    { id: "console", icon: ScrollText, label: "Playbooks", prefix: "#_" },
+    { id: "evidencias", icon: FolderArchive, label: "Evidencias", prefix: "%~" },
+    { id: "kb", icon: BookOpen, label: "Knowledge Base", prefix: "@_" },
+    { id: "tools", icon: Wrench, label: "Herramientas", prefix: "!>" },
   ]
 
   return (
@@ -75,6 +78,7 @@ export default function Sidebar({ onNewSession, activeSection, onSectionChange }
               key={item.id}
               icon={item.icon}
               label={item.label}
+              prefix={item.prefix}
               active={activeSection === item.id}
               onClick={() => onSectionChange(item.id)}
             />

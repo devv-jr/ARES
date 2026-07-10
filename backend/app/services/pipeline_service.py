@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from typing import Optional
 
 _REPO_ROOT = str(Path(__file__).resolve().parents[3])
 if _REPO_ROOT not in sys.path:
@@ -9,8 +10,8 @@ from agent.core.step_executor import execute_pipeline
 from agent.core.prompt_engine import list_prompts
 
 
-def run_pipeline(prompt_id: str):
-    yield from execute_pipeline(prompt_id)
+def run_pipeline(prompt_id: str, target: Optional[str] = None):
+    yield from execute_pipeline(prompt_id, target_ip=target)
 
 
 def get_available_prompts():
