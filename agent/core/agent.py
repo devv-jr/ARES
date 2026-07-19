@@ -10,6 +10,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 from agent.core import llm_client
 from agent.core.memory import memory
 from agent.core.rate_limiter import check_rate_limit
+from agent.core.audit import audit
 from agent.knowledge import retriever
 
 # ---------------------------------------------------------------------------
@@ -401,6 +402,10 @@ def process_query(
 
     # 1. Guardrails → hints (ya no cortocircuitan)
     security_hints = _detect_guardrails(cleaned)
+    if security_hints:
+        audit.warn("guardrail_triggered", "agent",
+            f"Guardrails activados: {', '.join(h.split()[0] for h in security_hints[:2])}",
+            {"session_id": session_id, "hints": security_hints})
 
     # 2. Inferir modo
     inferred_mode = (mode or "").strip().lower().replace(" ", "_")
@@ -420,17 +425,24 @@ def process_query(
     # 6. Rate limit
     throttle = check_rate_limit()
     if throttle:
+        audit.warn("rate_limit", "agent", "L\u00edmite de tasa excedido", {"session_id": session_id})
         return throttle
 
     # 7. Enviar al LLM
     try:
         response = llm_client.chat(messages)
     except ConnectionError as e:
+        audit.error("llm_error", "agent", f"Error LLM: {e}", {"session_id": session_id})
         return str(e)
 
     # 8. Guardar en memoria
     memory.add(session_id, "user", cleaned)
     memory.add(session_id, "assistant", response)
+
+    audit.info("chat_response", "agent",
+        f"Respuesta generada [{inferred_mode}/{topic_document}]",
+        {"session_id": session_id, "mode": inferred_mode,
+         "topic": topic_document, "tokens": len(response.split())})
 
     return response
 
@@ -456,6 +468,10 @@ def process_query_stream(
 
     # 1. Guardrails → hints
     security_hints = _detect_guardrails(cleaned)
+    if security_hints:
+        audit.warn("guardrail_triggered", "agent",
+            f"Guardrails activados (stream): {', '.join(h.split()[0] for h in security_hints[:2])}",
+            {"session_id": session_id})
 
     # 2. Inferir modo
     inferred_mode = (mode or "").strip().lower().replace(" ", "_")
@@ -475,6 +491,7 @@ def process_query_stream(
     # 6. Rate limit
     throttle = check_rate_limit()
     if throttle:
+        audit.warn("rate_limit", "agent", f"L\u00edmite de tasa excedido (stream)", {"session_id": session_id})
         yield throttle
         return
 
@@ -485,6 +502,7 @@ def process_query_stream(
             accumulated.append(chunk)
             yield chunk
     except ConnectionError as e:
+        audit.error("llm_error", "agent", f"Error LLM stream: {e}", {"session_id": session_id})
         yield str(e)
         return
 
@@ -493,6 +511,10 @@ def process_query_stream(
     if full_response:
         memory.add(session_id, "user", cleaned)
         memory.add(session_id, "assistant", full_response)
+        audit.info("chat_response", "agent",
+            f"Respuesta stream generada [{inferred_mode}]",
+            {"session_id": session_id, "mode": inferred_mode,
+             "topic": topic_document, "tokens": len(full_response.split())})
 
 
 def clear_session(session_id: str = "default") -> None:

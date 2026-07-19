@@ -1,0 +1,20 @@
+=== PLAYBOOK 01 ===
+Target: google.com
+Herramientas: Nmap, WhatWeb, Nikto
+
+--- Resultados ---
+[Desplegar entorno Docker]
+Sin salida
+
+[Escaneo de puertos]
+Sin salida
+
+[Análisis de vulnerabilidades]
+Sin salida
+
+[Limpiar entorno]
+Sin salida
+
+
+--- Análisis ARES ---
+Sin análisis disponible.

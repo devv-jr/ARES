@@ -4,6 +4,7 @@ import os
 
 import httpx
 from dotenv import load_dotenv
+from agent.core.audit import audit
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
@@ -453,11 +454,15 @@ def chat_stream(messages: list[dict]):
                     delivered = True
                     yield piece
                 if delivered:
+                    audit.info("llm_provider", "llm", "Stream de NVIDIA NIM completado",
+                               {"provider": "nim", "model": config["nim_model"]})
                     return
                 errors.append("NIM: no entregó contenido.")
                 continue
             except ConnectionError as exc:
                 errors.append(f"NIM: {exc}")
+                audit.warn("llm_fallback", "llm", f"NIM stream fall\u00f3: {exc}",
+                           {"provider": "nim"})
                 if nim_attempts >= 2:
                     break
     else:
@@ -471,10 +476,14 @@ def chat_stream(messages: list[dict]):
                     delivered = True
                     yield piece
                 if delivered:
+                    audit.info("llm_provider", "llm", "Stream de OpenRouter completado",
+                               {"provider": "openrouter", "model": config["openrouter_model"]})
                     return
                 errors.append("OpenRouter: no entregó contenido.")
             except ConnectionError as exc:
                 errors.append(f"OpenRouter: {exc}")
+                audit.warn("llm_fallback", "llm", f"OpenRouter stream fall\u00f3: {exc}",
+                           {"provider": "openrouter"})
         else:
             errors.append("OpenRouter: fallback activado pero falta OPENROUTER_API_KEY.")
 
@@ -485,10 +494,14 @@ def chat_stream(messages: list[dict]):
                 delivered = True
                 yield piece
             if delivered:
+                audit.info("llm_provider", "llm", "Stream de Ollama completado",
+                           {"provider": "ollama", "model": config["ollama_model"]})
                 return
             errors.append("Ollama: no entregó contenido.")
         except ConnectionError as exc:
             errors.append(f"Ollama: {exc}")
+            audit.warn("llm_fallback", "llm", f"Ollama stream fall\u00f3: {exc}",
+                       {"provider": "ollama"})
 
     raise ConnectionError(
         "No fue posible obtener respuesta de ningún proveedor.\n" + "\n".join(errors)
@@ -509,9 +522,14 @@ def chat(messages: list[dict]) -> str:
         while nim_attempts < 2:
             nim_attempts += 1
             try:
-                return _chat_with_nim(messages)
+                result = _chat_with_nim(messages)
+                audit.info("llm_provider", "llm", "Respuesta de NVIDIA NIM",
+                           {"provider": "nim", "model": config["nim_model"]})
+                return result
             except ConnectionError as exc:
                 errors.append(f"NIM: {exc}")
+                audit.warn("llm_fallback", "llm", f"NIM fall\u00f3, intentando respaldo: {exc}",
+                           {"provider": "nim", "attempt": nim_attempts})
                 if nim_attempts >= 2:
                     break
     else:
@@ -521,18 +539,28 @@ def chat(messages: list[dict]) -> str:
     if config["allow_openrouter_fallback"]:
         if config["openrouter_api_key"]:
             try:
-                return _chat_with_openrouter(messages)
+                result = _chat_with_openrouter(messages)
+                audit.info("llm_provider", "llm", "Respuesta de OpenRouter",
+                           {"provider": "openrouter", "model": config["openrouter_model"]})
+                return result
             except ConnectionError as exc:
                 errors.append(f"OpenRouter: {exc}")
+                audit.warn("llm_fallback", "llm", f"OpenRouter fall\u00f3: {exc}",
+                           {"provider": "openrouter"})
         else:
             errors.append("OpenRouter: fallback activado pero falta OPENROUTER_API_KEY.")
 
     # 3. Ollama (respaldo, requiere activación explícita)
     if config["allow_ollama_fallback"]:
         try:
-            return _chat_with_ollama(messages)
+            result = _chat_with_ollama(messages)
+            audit.info("llm_provider", "llm", "Respuesta de Ollama",
+                       {"provider": "ollama", "model": config["ollama_model"]})
+            return result
         except ConnectionError as exc:
             errors.append(f"Ollama: {exc}")
+            audit.warn("llm_fallback", "llm", f"Ollama fall\u00f3: {exc}",
+                       {"provider": "ollama"})
 
     raise ConnectionError(
         "No fue posible obtener respuesta de ningún proveedor.\n" + "\n".join(errors)

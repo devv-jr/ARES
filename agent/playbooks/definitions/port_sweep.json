@@ -1,0 +1,15 @@
+{
+  "id": "port_sweep",
+  "title": "Port Sweep",
+  "subtitle": "Reconnaissance + Basic Exploitation",
+  "description": "Scans a target for open ports and reports findings.",
+  "duration": "~2 min",
+  "tools": ["nmap", "docker"],
+  "steps": [
+    {"id": "deploy", "type": "docker_deploy", "name": "Desplegar entorno vulnerable", "image": "vulhub/httpd:2.4.49"},
+    {"id": "ping", "type": "ping", "name": "Verificar conectividad"},
+    {"id": "scan", "type": "command", "name": "Escaneo Nmap", "command": "nmap", "args": ["-sV", "-p", "{port}", "{target}"]},
+    {"id": "analyze", "type": "llm_analyze", "name": "Análisis ARES", "prompt": "Analiza estos resultados de nmap y sugiere próximos pasos de explotación."},
+    {"id": "cleanup", "type": "docker_destroy", "name": "Destruir entorno"}
+  ]
+}

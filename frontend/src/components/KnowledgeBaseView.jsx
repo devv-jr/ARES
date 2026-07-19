@@ -1,117 +1,71 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, ChevronRight, BookOpen, Shield, Terminal, Monitor, Code, Bug, Layers, ShieldCheck, Flame, Search, FileText } from "lucide-react"
-import Icon3D, { ICON_PALETTES } from "./Icon3D"
+import {
+  Loader2,
+  ChevronRight,
+  Search,
+  FileText,
+  BookOpen,
+  ShieldAlert,
+  Terminal,
+  Cpu,
+  Code2,
+  Skull,
+  Binary,
+  Activity,
+  Hash,
+} from "lucide-react"
+import KBMarkdown from "./KBMarkdown"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
+// Iconografía técnica — un icono por categoría, tono único de acento.
+// Se mantienen las mismas keys que envía el backend (cat.icon) para no
+// romper la integración; solo cambia el icono renderizado.
 const ICON_MAP = {
-  Shield,
-  Terminal,
-  Monitor,
-  Code,
-  Bug,
-  Layers,
-  ShieldCheck,
-  Flame,
+  Shield: ShieldAlert,
+  Terminal: Terminal,
+  Monitor: Cpu,
+  Code: Code2,
+  Bug: Skull,
+  Layers: Binary,
+  ShieldCheck: Activity,
+  Flame: Hash,
 }
 
-const COLOR_MAP = {
-  owasp: "text-red-400 border-red-900/40",
-  linux: "text-yellow-400 border-yellow-900/40",
-  windows: "text-blue-400 border-blue-900/40",
-  python: "text-green-400 border-green-900/40",
-  malware: "text-purple-400 border-purple-900/40",
-  mitre: "text-orange-400 border-orange-900/40",
-  "blue-team": "text-cyan-400 border-cyan-900/40",
-  "red-team": "text-rose-400 border-rose-900/40",
-}
-
-const BG_MAP = {
-  owasp: "hover:border-red-800/60",
-  linux: "hover:border-yellow-800/60",
-  windows: "hover:border-blue-800/60",
-  python: "hover:border-green-800/60",
-  malware: "hover:border-purple-800/60",
-  mitre: "hover:border-orange-800/60",
-  "blue-team": "hover:border-cyan-800/60",
-  "red-team": "hover:border-rose-800/60",
-}
-
-function renderContent(markdown) {
-  const lines = markdown.split("\n")
-  const html = []
-  let inCodeBlock = false
-  let codeContent = []
-  let codeLang = ""
-  let inList = false
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-
-    if (line.startsWith("```")) {
-      if (inCodeBlock) {
-        html.push(`<pre class="kb-code">${codeContent.join("\n")}</pre>`)
-        codeContent = []
-        inCodeBlock = false
-      } else {
-        inCodeBlock = true
-        codeLang = line.slice(3).trim()
-      }
-      continue
-    }
-
-    if (inCodeBlock) {
-      codeContent.push(line.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
-      continue
-    }
-
-    if (line.startsWith("### ")) {
-      html.push(`<h3 class="kb-h3">${line.slice(4)}</h3>`)
-    } else if (line.startsWith("## ")) {
-      html.push(`<h2 class="kb-h2">${line.slice(3)}</h2>`)
-    } else if (line.startsWith("| ")) {
-      if (!line.includes("---")) {
-        const cells = line.split("|").filter(Boolean).map((c) => c.trim())
-        html.push(`<tr>${cells.map((c) => `<td class="kb-td">${c}</td>`).join("")}</tr>`)
-      }
-    } else if (line.startsWith("- **")) {
-      const match = line.match(/- \*\*(.+?)\*\*(.*)/)
-      if (match) {
-        html.push(`<p class="kb-p"><span class="font-bold text-zinc-200">${match[1]}</span>${match[2]}</p>`)
-      }
-    } else if (line.startsWith("- ")) {
-      html.push(`<li class="kb-li">${line.slice(2)}</li>`)
-    } else if (line.match(/^\d+\. /)) {
-      html.push(`<li class="kb-li list-decimal ml-4">${line.replace(/^\d+\.\s*/, "")}</li>`)
-    } else if (line.startsWith("|")) {
-      continue
-    } else if (line.trim() === "") {
-      html.push("")
-    } else {
-      html.push(`<p class="kb-p">${line}</p>`)
-    }
-  }
-
-  return html.join("\n")
-}
-
-function SubcategoryItem({ sub, categoryId, isActive, onClick }) {
+function CategoryIcon({ Icon, active }) {
   return (
-    <motion.button
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      onClick={onClick}
-      className={`w-full text-left px-3 py-2 rounded-md text-xs transition-all ${
-        isActive
-          ? "bg-zinc-800/80 text-zinc-100 border-l-2 border-green-400"
-          : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40"
+    <span
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors duration-200 ${
+        active ? "bg-red-500/10" : "bg-transparent"
       }`}
     >
-      <div className="font-medium">{sub.name}</div>
-      <div className="text-[10px] text-zinc-600 mt-0.5 line-clamp-1">{sub.summary}</div>
+      <Icon
+        className={`h-3.5 w-3.5 transition-colors duration-200 ${
+          active ? "text-red-400" : "text-neutral-500"
+        }`}
+        strokeWidth={2}
+      />
+    </span>
+  )
+}
+
+function SubcategoryItem({ sub, isActive, onClick }) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      onClick={onClick}
+      className={`w-full rounded-md px-2.5 py-1.5 text-left text-[11px] font-mono transition-all duration-150 ${
+        isActive
+          ? "border-l-2 border-red-500/70 bg-red-500/[0.06] text-neutral-100"
+          : "border-l-2 border-transparent text-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
+      }`}
+    >
+      <div className="truncate">{sub.name}</div>
+      <div className="mt-0.5 truncate text-[10px] font-normal text-neutral-600">{sub.summary}</div>
     </motion.button>
   )
 }
@@ -123,6 +77,26 @@ export default function KnowledgeBaseView() {
   const [content, setContent] = useState(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState("")
+  const [shortcutLabel, setShortcutLabel] = useState("Ctrl K")
+  const searchRef = useRef(null)
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) {
+      setShortcutLabel("\u2318 K")
+    }
+  }, [])
+
+  useEffect(() => {
+    function onKeyDown(e) {
+      const isShortcut = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"
+      if (isShortcut) {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   useEffect(() => {
     fetch(`${API_URL}/kb/categories`)
@@ -171,50 +145,63 @@ export default function KnowledgeBaseView() {
 
   return (
     <div className="w-full max-w-5xl font-mono">
-      <div className="rounded-t-lg border border-zinc-800 bg-zinc-950/80 px-4 py-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-green-400 font-semibold">KNOWLEDGE BASE</span>
-          <span className="text-zinc-500">{categories.length} categorías</span>
+      <div
+        className="relative overflow-hidden rounded-[10px] border border-red-500/20 bg-neutral-950/70 backdrop-blur-xl"
+        style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.4), 0 0 40px -18px rgba(244,63,94,0.25)" }}
+      >
+        {/* Cabecera — búsqueda */}
+        <div className="border-b border-neutral-800/40 px-4 py-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-600" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar en knowledge base..."
+              className="w-full rounded-md border border-neutral-800/60 bg-neutral-900/40 py-2 pl-9 pr-16 text-xs text-neutral-200 placeholder:text-neutral-600 outline-none transition-colors focus:border-red-500/30"
+            />
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-neutral-700/50 bg-neutral-800/60 px-1.5 py-0.5 text-[10px] text-neutral-500">
+              {shortcutLabel}
+            </kbd>
+          </div>
         </div>
-        <div className="mt-1.5 relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-zinc-600" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en knowledge base..."
-            className="w-full bg-zinc-900/60 border border-zinc-800 rounded-md pl-7 pr-2 py-1.5 text-xs text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700"
-          />
-        </div>
-      </div>
 
-      <div className="border-x border-b border-zinc-800 rounded-b-lg bg-black/60">
         <div className="flex flex-col lg:flex-row">
-          <div className="lg:w-80 border-r border-zinc-800/60 p-3 max-h-[520px] overflow-y-auto">
-            <div className="flex flex-col gap-1">
+          {/* Columna izquierda — categorías */}
+          <div className="border-neutral-800/40 p-2.5 lg:w-64 lg:border-r max-h-[520px] overflow-y-auto">
+            <div className="flex flex-col gap-0.5">
               {filteredCategories.map((cat) => {
-                const Icon = ICON_MAP[cat.icon] || BookOpen
-                const color = COLOR_MAP[cat.id] || "text-zinc-400"
-                const hover = BG_MAP[cat.id] || "hover:border-zinc-700"
-                const palette = ICON_PALETTES[cat.id] || ICON_PALETTES.default
+                const Icon = ICON_MAP[cat.icon] || Terminal
                 const isActive = activeCategory?.id === cat.id
                 return (
                   <div key={cat.id}>
                     <motion.button
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                       onClick={() => handleCategoryClick(cat)}
-                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs transition-all border ${
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-all duration-150 ${
                         isActive
-                          ? `${color} bg-zinc-900/80`
-                          : "text-zinc-500 border-transparent hover:text-zinc-300 hover:bg-zinc-900/40"
-                      } ${isActive ? "" : hover}`}
+                          ? "bg-gradient-to-r from-red-500/10 via-red-500/[0.04] to-transparent"
+                          : "hover:bg-neutral-900/50"
+                      }`}
+                      style={
+                        isActive
+                          ? { boxShadow: "inset 2px 0 0 0 rgba(244,63,94,0.65)" }
+                          : undefined
+                      }
                     >
-                      <Icon3D icon={Icon} palette={palette} active={isActive} size="h-8 w-8" iconSize="h-4 w-4" />
-                      <span className="font-semibold tracking-wider">{cat.name}</span>
+                      <CategoryIcon Icon={Icon} active={isActive} />
+                      <span
+                        className={`text-[11px] font-semibold tracking-wide ${
+                          isActive ? "text-white" : "text-neutral-500"
+                        }`}
+                      >
+                        {cat.name}
+                      </span>
                       <ChevronRight
-                        className={`h-3 w-3 ml-auto shrink-0 transition-transform ${
-                          isActive ? "rotate-90" : ""
+                        className={`ml-auto h-3 w-3 shrink-0 text-neutral-700 transition-transform duration-200 ${
+                          isActive ? "rotate-90 text-red-400/70" : ""
                         }`}
                       />
                     </motion.button>
@@ -225,15 +212,14 @@ export default function KnowledgeBaseView() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
+                          transition={{ duration: 0.18 }}
                           className="overflow-hidden"
                         >
-                          <div className="flex flex-col gap-0.5 ml-4 mt-1 mb-1 pl-2 border-l border-zinc-800">
+                          <div className="ml-4 mb-1 mt-1 flex flex-col gap-0.5 border-l border-neutral-800/60 pl-2">
                             {cat.subcategories.map((sub) => (
                               <SubcategoryItem
                                 key={sub.id}
                                 sub={sub}
-                                categoryId={cat.id}
                                 isActive={activeSub?.id === sub.id}
                                 onClick={() => handleSubClick(sub)}
                               />
@@ -248,42 +234,33 @@ export default function KnowledgeBaseView() {
             </div>
           </div>
 
-          <div className="flex-1 p-4 max-h-[520px] overflow-y-auto">
+          {/* Columna derecha — visor de artículo */}
+          <div className="max-h-[520px] flex-1 overflow-y-auto bg-transparent p-5">
             {loading ? (
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
-                <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+              <div className="flex items-center gap-2 text-xs text-neutral-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-red-400/80" />
                 Cargando contenido...
               </div>
             ) : content ? (
               <motion.div
                 key={content.title}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.25 }}
               >
-                <div className="flex items-center gap-2.5 mb-3">
-                  <Icon3D
-                    icon={FileText}
-                    palette={ICON_PALETTES[activeCategory?.id] || ICON_PALETTES.default}
-                    active
-                    size="h-7 w-7"
-                    iconSize="h-3.5 w-3.5"
-                    rounded="rounded-lg"
-                  />
-                  <span className="text-xs text-zinc-500">{content.category}</span>
-                  <ChevronRight className="h-3 w-3 text-zinc-700" />
-                  <span className="text-sm font-semibold text-zinc-200">{content.title}</span>
+                <div className="mb-4 flex items-center gap-2 border-b border-neutral-800/40 pb-3">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-red-400/80" strokeWidth={2} />
+                  <span className="text-[11px] text-neutral-600">{content.category}</span>
+                  <ChevronRight className="h-3 w-3 text-neutral-700" />
+                  <span className="text-[13px] font-semibold text-white">{content.title}</span>
                 </div>
-                <div
-                  className="kb-render text-xs text-zinc-300 leading-relaxed space-y-2"
-                  dangerouslySetInnerHTML={{ __html: renderContent(content.content) }}
-                />
+                <KBMarkdown content={content.content} />
               </motion.div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Icon3D icon={BookOpen} palette={ICON_PALETTES.default} size="h-14 w-14" iconSize="h-6 w-6" className="mb-3" />
-                <p className="text-sm text-zinc-600">Selecciona una categoría y un tema</p>
-                <p className="text-[10px] text-zinc-700 mt-1">
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <BookOpen className="mb-3 h-8 w-8 text-neutral-700" strokeWidth={1.5} />
+                <p className="text-xs text-neutral-600">Selecciona una categoría y un tema</p>
+                <p className="mt-1 text-[10px] text-neutral-700">
                   {categories.length} categorías con recursos de ciberseguridad
                 </p>
               </div>

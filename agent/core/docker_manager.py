@@ -25,6 +25,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from agent.core.audit import audit
 
 router = APIRouter(prefix="/api/vulhub", tags=["vulhub"])
 
@@ -37,8 +38,8 @@ VULHUB_ROOT = Path(__file__).resolve().parent.parent / "vulhub"
 # Whitelist explícita: SOLO estos escenarios pueden levantarse.
 # Clave = nombre que usa el frontend, Valor = ruta relativa dentro de VULHUB_ROOT
 ALLOWED_SCENARIOS: dict[str, str] = {
-    "apache-backdoor": "apache/CVE-2021-41773",
-    "sql-injection-demo": "sqli/generic-sqli-lab",
+    "apache-backdoor": "httpd/CVE-2021-41773",
+    # "sql-injection-demo": "sqli/generic-sqli-lab",  # TODO: no existe en vulhub; curar un escenario SQLi real antes de habilitarlo.
     # Agrega más escenarios aquí conforme los vayas curando para el laboratorio.
 }
 
@@ -101,6 +102,8 @@ def list_scenarios() -> list[str]:
 
 @router.post("/start", response_model=ScenarioStatus)
 def start_scenario(payload: ScenarioRequest) -> ScenarioStatus:
+    audit.info("docker_start", "docker", f"Escenario iniciado: {payload.scenario}",
+               {"scenario": payload.scenario})
     scenario_path = _scenario_path(payload.scenario)
 
     result = _run(["docker", "compose", "up", "-d"], scenario_path)
@@ -126,6 +129,8 @@ def start_scenario(payload: ScenarioRequest) -> ScenarioStatus:
 
 @router.post("/stop", response_model=ScenarioStatus)
 def stop_scenario(payload: ScenarioRequest) -> ScenarioStatus:
+    audit.info("docker_stop", "docker", f"Escenario detenido: {payload.scenario}",
+               {"scenario": payload.scenario})
     scenario_path = _scenario_path(payload.scenario)
 
     result = _run(["docker", "compose", "down"], scenario_path)

@@ -12,8 +12,11 @@ import ChatLog from "../components/ChatLog"
 import OpsPanel from "../components/OpsPanel"
 import StatusPanel from "../components/StatusPanel"
 import KnowledgeBaseView from "../components/KnowledgeBaseView"
+import EvidenciasPanel from "../components/EvidenciasPanel"
+import AresLoadingBar from "../components/Onboarding/AresLoadingBar";
 
 export default function AresDashboard() {
+  const [showLoading, setShowLoading] = useState(true)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -192,8 +195,16 @@ export default function AresDashboard() {
     setModeMenuOpen(false)
   }
 
+  function handleLoadingComplete() {
+    setShowLoading(false)
+  }
+
+  if (showLoading) {
+    return <AresLoadingBar onComplete={handleLoadingComplete} duration={4500} />
+  }
+
   return (
-    <div className="dark flex h-screen w-full overflow-hidden bg-cover bg-center bg-no-repeat text-zinc-100" style={{ backgroundImage: 'url(/bg.png)' }}>
+    <div className="dark flex h-screen w-full overflow-hidden bg-cover bg-center bg-no-repeat text-zinc-100" style={{ backgroundImage: 'url(/background.png)' }}>
       <AnimatePresence>
         {dashboardOpen && (
           <motion.div
@@ -233,8 +244,8 @@ export default function AresDashboard() {
             )}
           </AnimatePresence>
 
-          <div className={`flex flex-1 flex-col overflow-y-auto ${activeSection === "kb" ? "px-6" : "px-6 py-8"}`}>
-            {activeSection !== "kb" && activeSection !== "console" && (
+          <div className={`flex flex-1 flex-col overflow-y-auto ${activeSection === "kb" || activeSection === "evidencias" ? "px-6" : "px-6 py-8"}`}>
+            {activeSection !== "kb" && activeSection !== "console" && activeSection !== "evidencias" && (
               <div className="flex flex-1 flex-col">
                 <AnimatePresence mode="wait">
                   {!dashboardOpen ? (
@@ -303,6 +314,12 @@ export default function AresDashboard() {
             {dashboardOpen && activeSection === "kb" && (
               <div className="flex flex-col items-center flex-1 justify-center overflow-y-auto pt-12">
                 <KnowledgeBaseView />
+              </div>
+            )}
+
+            {dashboardOpen && activeSection === "evidencias" && (
+              <div className="flex flex-col items-center flex-1 overflow-y-auto pt-12">
+                <EvidenciasPanel />
               </div>
             )}
 
