@@ -39,72 +39,62 @@ El sistema analiza solicitudes del usuario, proporciona explicaciones técnicas,
 
 ## `~/features` Capacidades del Agente
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  MÓDULOS ACTIVOS                                        │
-├──────────────────────────┬──────────────────────────────┤
-│  🛡️  Asistencia técnica  │  Soporte en temas de         │
-│                          │  ciberseguridad en tiempo    │
-│                          │  real                        │
-├──────────────────────────┼──────────────────────────────┤
-│  📚  Aprendizaje guiado  │  Rutas de conocimiento       │
-│                          │  adaptadas al nivel del      │
-│                          │  usuario                     │
-├──────────────────────────┼──────────────────────────────┤
-│  🔍  Análisis de info    │  Procesamiento y evaluación  │
-│                          │  de datos e inputs del       │
-│                          │  usuario                     │
-├──────────────────────────┼──────────────────────────────┤
-│  💬  Consultas           │  Respuestas especializadas   │
-│      especializadas      │  con contexto de seguridad   │
-├──────────────────────────┼──────────────────────────────┤
-│  ⚡  Recomendaciones     │  Sugerencias y mejores       │
-│                          │  prácticas personalizadas    │
-└──────────────────────────┴──────────────────────────────┘
+```mermaid
+flowchart LR
+    ARES["ARES"]
+
+    ARES --> M1["🛡️ Asistencia técnica"]
+    M1 --> M1D["Soporte en temas de<br/>ciberseguridad en tiempo real"]
+
+    ARES --> M2["📚 Aprendizaje guiado"]
+    M2 --> M2D["Rutas de conocimiento<br/>adaptadas al nivel del usuario"]
+
+    ARES --> M3["🔍 Análisis de info"]
+    M3 --> M3D["Procesamiento y evaluación<br/>de datos e inputs del usuario"]
+
+    ARES --> M4["💬 Consultas especializadas"]
+    M4 --> M4D["Respuestas especializadas<br/>con contexto de seguridad"]
+
+    ARES --> M5["⚡ Recomendaciones"]
+    M5 --> M5D["Sugerencias y mejores<br/>prácticas personalizadas"]
 ```
 
 ---
 
 ## `~/stack` Arquitectura del Sistema
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        USUARIO                               │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│              🌐  CAPA DE PRESENTACIÓN                       │
-│                                                             │
-│              React + Next.js · PWA (Web App)                │
-│         ┌─────────────┐  ┌──────────────┐                   │
-│         │  Chat UI    │  │  Dashboard   │                   │
-│         └─────────────┘  └──────────────┘                   │
-└──────────────────────────────┬───────────────────────────────┘
-                               │  API calls
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│              🤖  CAPA DEL AGENTE (Python)                    │
-│                                                              │
-│   ┌──────────────┐   ┌─────────────┐   ┌────────────────┐  │
-│   │  Orquestador │──▶│  Procesador │──▶│ Gesture Engine │  │
-│   │  de Agente   │   │  de Tareas  │   │  (respuestas)  │  │
-│   └──────────────┘   └─────────────┘   └────────────────┘  │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│              🧠  SERVICIOS DE INTELIGENCIA                   │
-│                                                              │
-│          LLM Provider  ·  Embeddings  ·  Tools               │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    U["👤 USUARIO"]
+
+    subgraph L1["🌐 CAPA DE PRESENTACIÓN<br/>React + Next.js · PWA (Web App)"]
+        direction LR
+        Chat["Chat UI"]
+        Dash["Dashboard"]
+    end
+
+    subgraph L2["🤖 CAPA DEL AGENTE (Python)"]
+        direction LR
+        Orq["Orquestador<br/>de Agente"] --> Proc["Procesador<br/>de Tareas"] --> Gest["Gesture Engine<br/>(respuestas)"]
+    end
+
+    subgraph L3["🧠 SERVICIOS DE INTELIGENCIA"]
+        direction LR
+        LLM["LLM Provider"]
+        Emb["Embeddings"]
+        Tools["Tools"]
+    end
+
+    U --> L1
+    L1 -->|API calls| L2
+    L2 --> L3
 ```
 
 ### Tecnologías utilizadas
 
 | Capa | Tecnología |
 |------|-----------|
-| Web App / PWA | React, Next.js |
+| Web App | React, Next.js |
 | Agente / Backend | Python |
 | IA | LLM vía API (agéntico) |
 | Comunicación | REST / WebSocket |
@@ -127,6 +117,15 @@ git clone https://github.com/devv-jr/ARES.git
 cd ARES
 ```
 
+### Preparar el entorno
+```bash
+python -m venv venv
+source venv/bin/activate      # Linux/macOS
+# venv\Scripts\activate       # Windows
+
+pip install -r requirements.txt
+```
+
 ### Web App (Next.js)
 
 ```bash
@@ -135,15 +134,12 @@ pnpm i
 pnpm dev
 ```
 
-### Backend y el agente (Python)
+### Backend para levantar al agente (Python)
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate      # Linux/macOS
-# venv\Scripts\activate       # Windows
 
-pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
 ### Configurar variables de entorno
@@ -151,12 +147,6 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Editar .env con tus API keys y configuración
-```
-
-### Levantar el agente
-
-```bash
-uvicorn app.main:app --reload
 ```
 
 ---
@@ -190,30 +180,32 @@ ARES_RPM_LIMIT=35
 
 ## `~/structure` Estructura del Proyecto
 
-```
-ARES/
-├── 🌐 frontend/               # Web App React + Next.js (PWA)
-│   ├── src/
-│   │   ├── pages/              # Vistas principales
-│   │   ├── components/         # Componentes reutilizables
-│   │   ├── hooks/              # Custom hooks
-│   │   └── services/           # Llamadas al agente
-│   └── public/                 # Assets estáticos + manifest.json
-│
-├── 💻 backend/                # API REST y conexión entre el modelo de IA y el Frontend
-│   └── app/
-│       ├── routes/            # Endpoints y rutas de la API (Controladores)
-│       ├── services/          # Lógica de negocio y servicios externos (BD, APIs)
-│       └── main.py            # Archivo principal de arranque de la aplicación (FastAPI/Flask)
-│
-├── 🤖 agent/                  # Módulo del Agente de IA y Configuración del LLM
-│   ├── core/                  # Lógica central del agente, toma de decisiones y memoria
-│   ├── tools/                 # Herramientas y funciones que el agente puede ejecutar
-│   ├── knowledge/             # Base de conocimiento local (Vectores, RAG, documentos)
-│   └── prompts/               # Plantillas de instrucciones y system prompts del sistema
-│
-├── 📄 docs/                    # Documentación técnica
-└── README.md                   # Documento principal del proyecto ARES
+```mermaid
+flowchart LR
+    ROOT["ARES/"]
+
+    ROOT --> FE["🌐 frontend/<br/>Web App React + Next.js (PWA)"]
+    FE --> FESRC["src/"]
+    FESRC --> FEPAGES["pages/<br/>Vistas principales"]
+    FESRC --> FECOMP["components/<br/>Componentes reutilizables"]
+    FESRC --> FEHOOKS["hooks/<br/>Custom hooks"]
+    FESRC --> FESERV["services/<br/>Llamadas al agente"]
+    FE --> FEPUB["public/<br/>Assets estáticos + manifest.json"]
+
+    ROOT --> BE["💻 backend/<br/>API REST y conexión entre el modelo de IA y el Frontend"]
+    BE --> BEAPP["app/"]
+    BEAPP --> BEROUTES["routes/<br/>Endpoints y rutas de la API (Controladores)"]
+    BEAPP --> BESERV["services/<br/>Lógica de negocio y servicios externos (BD, APIs)"]
+    BEAPP --> BEMAIN["main.py<br/>Archivo principal de arranque de la aplicación (FastAPI/Flask)"]
+
+    ROOT --> AG["🤖 agent/<br/>Módulo del Agente de IA y Configuración del LLM"]
+    AG --> AGCORE["core/<br/>Lógica central del agente, toma de decisiones y memoria"]
+    AG --> AGTOOLS["tools/<br/>Herramientas y funciones que el agente puede ejecutar"]
+    AG --> AGKNOW["knowledge/<br/>Base de conocimiento local (Vectores, RAG, documentos)"]
+    AG --> AGPROMPTS["prompts/<br/>Plantillas de instrucciones y system prompts del sistema"]
+
+    ROOT --> DOCS["📄 docs/<br/>Documentación técnica"]
+    ROOT --> RM["README.md<br/>Documento principal del proyecto ARES"]
 ```
 
 ---
@@ -224,10 +216,10 @@ ARES/
 
 | | Integrante | Rol |
 |-|-----------|-----|
-| 🦏 | **Bruno** | Tech Lead · Full Stack Developer · Arquitectura e Integración |
-| 🎨 | **Yered** | Frontend Developer · UI/UX Lead · Experiencia de usuario |
-| 🐍 | **Jairo** | Backend Developer Junior · Python · Lógica del agente |
-| 📚 | **Axel** | Security Research · Documentación · Investigación en ciberseguridad |
+| **Bruno** | Tech Lead · Full Stack Developer · Arquitectura e Integración |
+| **Yered** | Frontend Developer · UI/UX Lead · Experiencia de usuario |
+| **Jairo** | Backend Developer Junior · Python · Lógica del agente |
+| **Axel** | Security Research · Documentación · Investigación en ciberseguridad |
 
 ---
 
