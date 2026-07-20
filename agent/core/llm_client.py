@@ -9,7 +9,7 @@ from agent.core.audit import audit
 load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 # --- NVIDIA NIM (opción principal) ---
-DEFAULT_NIM_MODEL = "meta/llama-3.1-8b-instruct"
+DEFAULT_NIM_MODEL = "deepseek-ai/deepseek-v4-flash"
 DEFAULT_NIM_TIMEOUT_SECONDS = 35.0
 DEFAULT_NIM_MAX_TOKENS = 512
 

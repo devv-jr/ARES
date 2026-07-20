@@ -21,6 +21,7 @@ from agent.core.llm_client import check_connection
 from agent.core import docker_manager
 from agent.core.audit import audit
 from app.api.playbooks import router as playbooks_router
+from app.api.conversations import router as conversations_router
 
 app = FastAPI(title="ARES API", version="1.0.0")
 
@@ -36,6 +37,7 @@ app.add_middleware(
 
 app.include_router(docker_manager.router)
 app.include_router(playbooks_router)
+app.include_router(conversations_router)
 
 
 class PipelineRequest(BaseModel):

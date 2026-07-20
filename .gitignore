@@ -10,3 +10,6 @@
 **.log
 
 /agent/vulhub
+
+# Conversaciones persistentes (runtime)
+/backend/data/

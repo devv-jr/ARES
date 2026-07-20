@@ -4,6 +4,15 @@ import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 import { API_URL } from "../lib/constants"
+import {
+  createConversation,
+  getConversations,
+  getConversation,
+  deleteConversation,
+  renameConversation,
+  persistExchange,
+  activateConversation,
+} from "../lib/conversations"
 import Sidebar from "../components/Sidebar"
 import TopNav from "../components/TopNav"
 import AiCore from "../components/AiCore"
@@ -13,7 +22,7 @@ import OpsPanel from "../components/OpsPanel"
 import StatusPanel from "../components/StatusPanel"
 import KnowledgeBaseView from "../components/KnowledgeBaseView"
 import EvidenciasPanel from "../components/EvidenciasPanel"
-import AresLoadingBar from "../components/Onboarding/AresLoadingBar";
+import HackerLoadingScreen from "../components/Onboarding/HackerLoadingScreen";
 
 export default function AresDashboard() {
   const [showLoading, setShowLoading] = useState(true)
@@ -26,8 +35,15 @@ export default function AresDashboard() {
   const [activeSection, setActiveSection] = useState("chat")
   const [dashboardOpen, setDashboardOpen] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [conversations, setConversations] = useState([])
+  const [currentConversationId, setCurrentConversationId] = useState(null)
+  const conversationIdRef = useRef(null)
   const topNavRef = useRef(null)
   const sessionIdRef = useRef(typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "default")
+
+  useEffect(() => {
+    getConversations().then(setConversations).catch(() => {})
+  }, [])
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -55,6 +71,16 @@ export default function AresDashboard() {
     const text = input.trim()
     if (!text || loading) return
 
+    if (!conversationIdRef.current) {
+      try {
+        const conv = await createConversation({ mode: selectedMode })
+        sessionIdRef.current = conv.id
+        conversationIdRef.current = conv.id
+        setCurrentConversationId(conv.id)
+        setConversations(prev => [conv, ...prev.filter(c => c.id !== conv.id)])
+      } catch {}
+    }
+
     setError(null)
     setInput("")
     setMessages((prev) => [...prev, { role: "user", content: text }])
@@ -66,7 +92,9 @@ export default function AresDashboard() {
       return [...prev, { role: "assistant", content: "" }]
     })
 
+    let fullAssistantContent = ""
     function appendToAssistant(piece) {
+      fullAssistantContent += piece
       setMessages((prev) => {
         const next = [...prev]
         next[assistantIndex] = {
@@ -76,6 +104,8 @@ export default function AresDashboard() {
         return next
       })
     }
+
+    let streamSuccess = false
 
     try {
       const res = await fetch(`${API_URL}/chat/stream`, {
@@ -123,6 +153,8 @@ export default function AresDashboard() {
       if (!receivedAny) {
         appendToAssistant("ARES no devolvió contenido. Intenta de nuevo.")
       }
+
+      streamSuccess = true
     } catch (err) {
       setError(
         err instanceof TypeError
@@ -132,6 +164,21 @@ export default function AresDashboard() {
       setMessages((prev) => prev.filter((_, i) => i !== assistantIndex || prev[i].content))
     } finally {
       setLoading(false)
+      if (streamSuccess && conversationIdRef.current && text) {
+        persistExchange(conversationIdRef.current, text, fullAssistantContent)
+          .then((result) => {
+            if (result?.title_updated) {
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === conversationIdRef.current
+                    ? { ...c, title: result.conversation.title }
+                    : c
+                )
+              )
+            }
+          })
+          .catch(() => {})
+      }
     }
   }
 
@@ -140,8 +187,10 @@ export default function AresDashboard() {
     setError(null)
     setInput("")
     setLoading(false)
-    setHasInitialized(false)
-    setDashboardOpen(false)
+    setHasInitialized(true)
+    setDashboardOpen(true)
+    setCurrentConversationId(null)
+    conversationIdRef.current = null
     sessionIdRef.current = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "default"
   }
 
@@ -190,6 +239,42 @@ export default function AresDashboard() {
     })
   }
 
+  async function handleSelectConversation(conv) {
+    try {
+      const convId = conv.id || conv
+      const fullConv = typeof conv === "object" && conv.messages
+        ? conv
+        : await getConversation(convId)
+      await activateConversation(convId)
+      sessionIdRef.current = convId
+      conversationIdRef.current = convId
+      setCurrentConversationId(convId)
+      setMessages((fullConv.messages || []).map((m) => ({ role: m.role, content: m.content })))
+      setDashboardOpen(true)
+      setHasInitialized(true)
+      setLoading(false)
+      setError(null)
+      setActiveSection("chat")
+    } catch {}
+  }
+
+  async function handleDeleteConversation(id) {
+    try {
+      await deleteConversation(id)
+      setConversations((prev) => prev.filter((c) => c.id !== id))
+      if (currentConversationId === id) {
+        handleNewSession()
+      }
+    } catch {}
+  }
+
+  async function handleRenameConversation(id, title) {
+    try {
+      await renameConversation(id, title)
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)))
+    } catch {}
+  }
+
   function handleModeChange(mode) {
     setSelectedMode(mode)
     setModeMenuOpen(false)
@@ -200,7 +285,7 @@ export default function AresDashboard() {
   }
 
   if (showLoading) {
-    return <AresLoadingBar onComplete={handleLoadingComplete} duration={4500} />
+    return <HackerLoadingScreen onComplete={handleLoadingComplete} duration={4500} />
   }
 
   return (
@@ -214,7 +299,16 @@ export default function AresDashboard() {
             exit={{ x: -300, opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            <Sidebar onNewSession={handleNewSession} activeSection={activeSection} onSectionChange={setActiveSection} />
+            <Sidebar
+  onNewSession={handleNewSession}
+  activeSection={activeSection}
+  onSectionChange={setActiveSection}
+  conversations={conversations}
+  currentConversationId={currentConversationId}
+  onSelectConversation={handleSelectConversation}
+  onDeleteConversation={handleDeleteConversation}
+  onRenameConversation={handleRenameConversation}
+/>
           </motion.div>
         )}
       </AnimatePresence>

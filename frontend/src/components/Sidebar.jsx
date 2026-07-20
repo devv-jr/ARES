@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   Plus,
   MessageSquare,
@@ -6,11 +7,11 @@ import {
   FlaskConical,
   BookOpen,
   Wrench,
-  Sparkles,
+  X,
 } from "lucide-react"
 import Image from "next/image"
 
-function SidebarNavItem({ icon: Icon, label, prefix, active, onClick }) {
+function SidebarNavItem({ icon: Icon, label, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -20,9 +21,6 @@ function SidebarNavItem({ icon: Icon, label, prefix, active, onClick }) {
           : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
       }`}
     >
-      <span className="w-5 text-right text-[11px] font-bold text-zinc-700 group-hover:text-zinc-500 transition-colors select-none">
-        {prefix}
-      </span>
       <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate uppercase tracking-wider">{label}</span>
     </button>
@@ -37,14 +35,83 @@ function SectionLabel({ children }) {
   )
 }
 
-export default function Sidebar({ onNewSession, activeSection, onSectionChange }) {
+function ConversationItem({ conversation, isActive, onSelect, onDelete, onRename }) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(conversation.title)
+
+  function handleDoubleClick(e) {
+    e.stopPropagation()
+    setEditing(true)
+    setEditValue(conversation.title)
+  }
+
+  function handleSave() {
+    const trimmed = editValue.trim()
+    if (trimmed && trimmed !== conversation.title) {
+      onRename(conversation.id, trimmed)
+    }
+    setEditing(false)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") handleSave()
+    if (e.key === "Escape") setEditing(false)
+  }
+
+  return (
+    <div
+      className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition-colors ${
+        isActive
+          ? "bg-zinc-800/60"
+          : "hover:bg-zinc-800/40"
+      }`}
+    >
+      {editing ? (
+        <input
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          autoFocus
+          className="flex-1 bg-transparent text-sm text-zinc-200 outline-none border-b border-zinc-600"
+        />
+      ) : (
+        <button
+          onClick={() => onSelect(conversation)}
+          onDoubleClick={handleDoubleClick}
+          className="flex flex-1 items-center gap-2 truncate text-left"
+        >
+          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+          <span className="truncate text-sm text-zinc-300">{conversation.title}</span>
+        </button>
+      )}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(conversation.id) }}
+        className="shrink-0 text-zinc-500 opacity-0 transition-all hover:text-red-400 group-hover:opacity-100"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+}
+
+export default function Sidebar({
+  onNewSession,
+  activeSection,
+  onSectionChange,
+  conversations,
+  currentConversationId,
+  onSelectConversation,
+  onDeleteConversation,
+  onRenameConversation,
+}) {
   const items = [
-    { id: "chat", icon: MessageSquare, label: "Chat", prefix: ">_" },
-    { id: "lab", icon: FlaskConical, label: "Laboratorio", prefix: "$_" },
-    { id: "console", icon: ScrollText, label: "Playbooks", prefix: "#_" },
-    { id: "evidencias", icon: FolderArchive, label: "Evidencias", prefix: "%~" },
-    { id: "kb", icon: BookOpen, label: "Knowledge Base", prefix: "@_" },
-    { id: "tools", icon: Wrench, label: "Herramientas", prefix: "!>" },
+    { id: "chat", icon: MessageSquare, label: "Chat" },
+    { id: "lab", icon: FlaskConical, label: "Laboratorio" },
+    { id: "console", icon: ScrollText, label: "Playbooks" },
+    { id: "evidencias", icon: FolderArchive, label: "Evidencias" },
+    { id: "kb", icon: BookOpen, label: "Knowledge Base" },
+    { id: "tools", icon: Wrench, label: "Herramientas" },
   ]
 
   return (
@@ -71,37 +138,37 @@ export default function Sidebar({ onNewSession, activeSection, onSectionChange }
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3">
+      <div className="flex-1 overflow-y-auto px-3">
         <div className="flex flex-col gap-0.5 pt-4">
+          <SectionLabel>Navegación</SectionLabel>
           {items.map((item) => (
             <SidebarNavItem
               key={item.id}
               icon={item.icon}
               label={item.label}
-              prefix={item.prefix}
               active={activeSection === item.id}
               onClick={() => onSectionChange(item.id)}
             />
           ))}
         </div>
-      </nav>
 
-      <div className="p-3">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 backdrop-blur-md">
-          <div className="mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-red-500" />
-            <p className="text-sm font-semibold text-zinc-100">
-              Actualizar a ARES Pro
-            </p>
+        {conversations && conversations.length > 0 && (
+          <div className="pt-4">
+            <SectionLabel>Historial</SectionLabel>
+            <div className="flex flex-col gap-0.5">
+              {conversations.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conversation={conv}
+                  isActive={conv.id === currentConversationId}
+                  onSelect={onSelectConversation}
+                  onDelete={onDeleteConversation}
+                  onRename={onRenameConversation}
+                />
+              ))}
+            </div>
           </div>
-          <p className="mb-3 text-xs leading-relaxed text-zinc-500">
-            Automatización ofensiva y defensiva sin límites, con agentes que se
-            adaptan a tu perímetro.
-          </p>
-          <button className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 py-2 text-xs font-medium text-zinc-200 transition-colors hover:border-red-800/60 hover:bg-zinc-800">
-            Actualizar
-          </button>
-        </div>
+        )}
       </div>
     </aside>
   )

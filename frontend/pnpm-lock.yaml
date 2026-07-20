@@ -27,7 +27,7 @@ importers:
         specifier: ^11.11.1
         version: 11.11.1
       lucide-react:
-        specifier: ^1.16.0
+        specifier: ^1.23.0
         version: 1.23.0(react@19.2.4)
       next:
         specifier: 16.2.6
