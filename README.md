@@ -214,12 +214,7 @@ flowchart LR
 
 > Proyecto desarrollado para la **Feria de Ciencias — IEU Universidad, Puebla 2026**
 
-| Integrante | Rol |                                                            
-|-|-----------|-----|
-| **Bruno** | Tech Lead · Full Stack Developer · Arquitectura e Integración |
-| **Yered** | Frontend Developer · UI/UX Lead · Experiencia de usuario |
-| **Jairo** | Backend Developer Junior · Python · Lógica del agente |
-| **Axel** | Security Research · Documentación · Investigación en ciberseguridad |
+![](/assets/ares_team.png)
 
 ---
 
