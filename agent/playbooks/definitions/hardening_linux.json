@@ -1,0 +1,66 @@
+{
+  "id": "hardening_linux",
+  "title": "Hardening Linux",
+  "subtitle": "Blue Team · Baseline CIS",
+  "description": "Despliega un lab Ubuntu y ejecuta un checklist de hardening: usuarios, SSH, permisos y superficie de ataque. ARES genera recomendaciones priorizadas.",
+  "duration": "~6 min",
+  "tools": ["docker", "bash", "ARES LLM"],
+  "category": "blue_team",
+  "icon": "shield",
+  "badge": "Blue Team",
+  "difficulty": "intermediate",
+  "requires_target": false,
+  "lab": {
+    "image": "ubuntu:22.04",
+    "description": "Contenedor Ubuntu 22.04 para inspección de baseline"
+  },
+  "steps": [
+    {
+      "id": "deploy",
+      "type": "docker_deploy",
+      "name": "Desplegar lab Ubuntu",
+      "image": "ubuntu:22.04",
+      "timeout": 180
+    },
+    {
+      "id": "inventory",
+      "type": "command",
+      "name": "Inventario del sistema",
+      "command": "docker",
+      "args": [
+        "exec",
+        "{container_name}",
+        "bash",
+        "-c",
+        "echo '=== OS ==='; cat /etc/os-release 2>/dev/null; echo; echo '=== USERS ==='; getent passwd | head -30; echo; echo '=== SUDOERS ==='; ls -la /etc/sudoers.d 2>/dev/null; cat /etc/sudoers 2>/dev/null | head -40; echo; echo '=== LISTENING (ss) ==='; ss -tulpn 2>/dev/null || netstat -tulpn 2>/dev/null || echo 'ss/netstat no disponible'; echo; echo '=== SSH CONFIG ==='; cat /etc/ssh/sshd_config 2>/dev/null | grep -E '^(PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|Port)' || echo 'sshd_config no encontrado (imagen mínima)'"
+      ],
+      "timeout": 60
+    },
+    {
+      "id": "permissions",
+      "type": "command",
+      "name": "Revisión de permisos críticos",
+      "command": "docker",
+      "args": [
+        "exec",
+        "{container_name}",
+        "bash",
+        "-c",
+        "echo '=== WORLD-WRITABLE (muestra) ==='; find /etc /tmp /var/tmp -type f -perm -0002 2>/dev/null | head -20; echo; echo '=== SUID (muestra) ==='; find /usr /bin /sbin -type f -perm -4000 2>/dev/null | head -20; echo; echo '=== /tmp perms ==='; ls -ld /tmp /var/tmp 2>/dev/null"
+      ],
+      "timeout": 60
+    },
+    {
+      "id": "analyze",
+      "type": "llm_analyze",
+      "name": "Análisis ARES · Hardening",
+      "prompt": "Eres analista Blue Team. Con el inventario y permisos del lab Linux, elabora: 1) Hallazgos priorizados (Critical/High/Medium), 2) Checklist CIS aplicable (SSH, usuarios, permisos, red), 3) Comandos concretos de remediación, 4) Resumen ejecutivo en 5 líneas. Responde en español, formato markdown.",
+      "timeout": 120
+    },
+    {
+      "id": "cleanup",
+      "type": "docker_destroy",
+      "name": "Destruir lab"
+    }
+  ]
+}

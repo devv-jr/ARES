@@ -4,7 +4,7 @@ import {
   MessageSquare,
   FolderArchive,
   ScrollText,
-  FlaskConical,
+  Swords,
   BookOpen,
   Wrench,
   X,
@@ -107,8 +107,7 @@ export default function Sidebar({
 }) {
   const items = [
     { id: "chat", icon: MessageSquare, label: "Chat" },
-    { id: "lab", icon: FlaskConical, label: "Laboratorio" },
-    { id: "console", icon: ScrollText, label: "Playbooks" },
+    { id: "console", icon: Swords, label: "Mission Builder" },
     { id: "evidencias", icon: FolderArchive, label: "Evidencias" },
     { id: "kb", icon: BookOpen, label: "Knowledge Base" },
     { id: "tools", icon: Wrench, label: "Herramientas" },
@@ -155,7 +154,7 @@ export default function Sidebar({
         {conversations && conversations.length > 0 && (
           <div className="pt-4">
             <SectionLabel>Historial</SectionLabel>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-0.5 max-h-[280px] overflow-y-auto">
               {conversations.map((conv) => (
                 <ConversationItem
                   key={conv.id}

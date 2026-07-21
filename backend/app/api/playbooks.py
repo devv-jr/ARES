@@ -19,7 +19,8 @@ router = APIRouter(prefix="/playbooks", tags=["playbooks"])
 
 
 class RunPlaybookRequest(BaseModel):
-    target: str
+    """target es opcional: misiones con lab Docker interno no lo requieren."""
+    target: str = ""
 
 
 @router.get("")

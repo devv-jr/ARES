@@ -11,5 +11,5 @@
 
 /agent/vulhub
 
-# Conversaciones persistentes (runtime)
+# Datos runtime (conversaciones, mission runs, reportes)
 /backend/data/

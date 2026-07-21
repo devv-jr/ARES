@@ -1,5 +1,5 @@
 """
-Modelos de datos para Playbooks de ARES.
+Modelos de datos para Playbooks / Mission Builder de ARES.
 Valida y tipa la estructura de los archivos JSON en definitions/.
 """
 from __future__ import annotations
@@ -13,6 +13,7 @@ StepType = Literal[
     "ping",
     "command",
     "llm_analyze",
+    "inspect_asset",
 ]
 
 
@@ -26,7 +27,14 @@ class PlaybookStep(BaseModel):
     command: str | None = None                      # command
     args: list[str] = Field(default_factory=list)   # command
     prompt: str | None = None                        # llm_analyze
-    timeout: int = 60                                 # segundos, aplica a cualquier step
+    asset: str | None = None                         # inspect_asset (relativo a assets/)
+    timeout: int = 60                                 # segundos
+
+
+class LabInfo(BaseModel):
+    """Metadatos del lab Docker asociado a la misión (informativo)."""
+    image: str | None = None
+    description: str = ""
 
 
 class PlaybookDefinition(BaseModel):
@@ -38,10 +46,18 @@ class PlaybookDefinition(BaseModel):
     tools: list[str] = Field(default_factory=list)
     steps: list[PlaybookStep]
 
+    # Mission Builder metadata (opcionales, backward-compatible)
+    category: str = "general"
+    icon: str = "target"
+    badge: str = ""
+    difficulty: str = "intermediate"
+    requires_target: bool = False
+    lab: LabInfo | None = None
+
 
 class PlaybookEvent(BaseModel):
     """Evento emitido por el engine mientras corre un playbook (para SSE)."""
-    type: Literal["step_start", "step_output", "step_end", "playbook_end", "error"]
+    type: Literal["step_start", "step_output", "step_end", "playbook_end", "error", "run_meta"]
     step_id: str | None = None
     step_name: str | None = None
     data: Any = None

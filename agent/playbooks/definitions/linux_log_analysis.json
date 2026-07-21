@@ -1,0 +1,38 @@
+{
+  "id": "linux_log_analysis",
+  "title": "Análisis de Logs Linux",
+  "subtitle": "Blue Team · Threat Hunting",
+  "description": "Analiza un auth.log de laboratorio con intentos de fuerza bruta, IOCs y actividad sospechosa. ARES correlaciona eventos y propone contención.",
+  "duration": "~4 min",
+  "tools": ["ARES LLM", "auth.log sample"],
+  "category": "blue_team",
+  "icon": "scroll",
+  "badge": "SOC",
+  "difficulty": "beginner",
+  "requires_target": false,
+  "lab": {
+    "description": "Asset de logs de autenticación Linux (sin Docker obligatorio)"
+  },
+  "steps": [
+    {
+      "id": "load_logs",
+      "type": "inspect_asset",
+      "name": "Cargar auth.log de laboratorio",
+      "asset": "sample_auth.log"
+    },
+    {
+      "id": "triage",
+      "type": "llm_analyze",
+      "name": "Triage inicial",
+      "prompt": "Eres analista SOC. Revisa el auth.log de laboratorio y entrega: 1) Timeline de eventos relevantes, 2) IPs y usuarios involucrados, 3) Señales de brute-force / recon web, 4) Indicadores de compromiso (IOC), 5) Severidad global. Español, markdown, conciso.",
+      "timeout": 120
+    },
+    {
+      "id": "response",
+      "type": "llm_analyze",
+      "name": "Plan de respuesta",
+      "prompt": "Con el triage previo del auth.log, elabora un plan de respuesta Blue Team: contención, erradicación, recuperación y lecciones aprendidas. Incluye reglas UFW/fail2ban de ejemplo y queries de hunting. Español, markdown.",
+      "timeout": 120
+    }
+  ]
+}

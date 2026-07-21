@@ -18,7 +18,7 @@ import TopNav from "../components/TopNav"
 import AiCore from "../components/AiCore"
 import InputArea from "../components/InputArea"
 import ChatLog from "../components/ChatLog"
-import OpsPanel from "../components/OpsPanel"
+import MissionBuilderView from "../components/MissionBuilderView"
 import StatusPanel from "../components/StatusPanel"
 import KnowledgeBaseView from "../components/KnowledgeBaseView"
 import EvidenciasPanel from "../components/EvidenciasPanel"
@@ -418,16 +418,8 @@ export default function AresDashboard() {
             )}
 
             {dashboardOpen && activeSection === "console" && (
-              <div className="flex flex-col items-center pt-8">
-                <OpsPanel />
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="mt-8 flex justify-center px-2 pb-8"
-                >
-                  <StatusPanel mode={selectedMode} />
-                </motion.div>
+              <div className="flex flex-col items-center flex-1 overflow-y-auto pt-8 pb-8">
+                <MissionBuilderView />
               </div>
             )}
           </div>
