@@ -51,13 +51,13 @@ export default function TopNav({ selectedMode, onModeChange, modeMenuOpen, setMo
       </div>
 
       <div className="flex items-center gap-2">
-        <button className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-300 backdrop-blur-md transition-colors hover:border-zinc-700">
+        {/* <button className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-300 backdrop-blur-md transition-colors hover:border-zinc-700">
           <Settings2 className="h-3.5 w-3.5" />
           Configuración
-        </button>
+        </button> */}
         <button className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-xs text-zinc-300 backdrop-blur-md transition-colors hover:border-zinc-700">
           <Download className="h-3.5 w-3.5" />
-          Exportar Log
+          Exportar Conversación
         </button>
       </div>
     </header>

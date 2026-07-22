@@ -19,13 +19,24 @@ class StepContext:
         self.outputs: dict[str, Any] = {}  # step_id -> resultado
 
     def resolve(self, value: str) -> str:
-        """Sustituye placeholders como {target}/{port} en args de un step."""
-        return value.format(
-            target=self.container_ip or self.target,
-            container_ip=self.container_ip or "",
-            container_name=self.container_name or "",
-            port=self.container_port or "",
-        )
+        """Sustituye solo placeholders conocidos ({target}, {port}, ...).
+
+        No usa str.format: args de curl llevan sintaxis propia como %{http_code}
+        y rutas con literales { } que no deben interpolarse.
+        """
+        if not value or "{" not in value:
+            return value
+        replacements = {
+            "{target}": str(self.container_ip or self.target or ""),
+            "{container_ip}": str(self.container_ip or ""),
+            "{container_name}": str(self.container_name or ""),
+            "{port}": str(self.container_port or ""),
+        }
+        resolved = value
+        for placeholder, replacement in replacements.items():
+            if placeholder in resolved:
+                resolved = resolved.replace(placeholder, replacement)
+        return resolved
 
 
 class StepExecutor(ABC):

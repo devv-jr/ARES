@@ -14,7 +14,7 @@ DEFAULT_NIM_TIMEOUT_SECONDS = 35.0
 DEFAULT_NIM_MAX_TOKENS = 512
 
 # --- OpenRouter (respaldo, desactivado por default) ---
-DEFAULT_OPENROUTER_MODEL = "openrouter/auto"
+DEFAULT_OPENROUTER_MODEL = "openrouter/free"
 DEFAULT_OPENROUTER_TIMEOUT_SECONDS = 35.0
 DEFAULT_ALLOW_OPENROUTER_FALLBACK = False
 
@@ -90,6 +90,43 @@ def _get_config() -> dict:
 # NVIDIA NIM
 # ---------------------------------------------------------------------------
 
+def _nim_payload(messages: list[dict], *, stream: bool) -> dict:
+    """Arma el body de NIM. Desactiva thinking de DeepSeek si NIM_THINKING_MODE=false."""
+    config = _get_config()
+    payload: dict = {
+        "model": config["nim_model"],
+        "messages": messages,
+        "max_tokens": config["nim_max_tokens"],
+        "temperature": 0.4,
+        "stream": stream,
+    }
+    # DeepSeek-V3/V4 en NIM: sin esto el modelo gasta tokens en reasoning_content
+    # y el stream puede cerrar sin `content` usable (misiones DFIR largas).
+    if not config["nim_thinking_mode"]:
+        payload["chat_template_kwargs"] = {"thinking": False}
+    return payload
+
+
+def _extract_nim_message_text(message: dict | None) -> str:
+    if not message:
+        return ""
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+    # Algunos modelos devuelven content como lista de partes
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("text"):
+                parts.append(str(part["text"]))
+        joined = "".join(parts).strip()
+        if joined:
+            return joined
+    return ""
+
+
 def _chat_with_nim(messages: list[dict]) -> str:
     config = _get_config()
     api_key = config["nim_api_key"]
@@ -97,36 +134,36 @@ def _chat_with_nim(messages: list[dict]) -> str:
         raise ConnectionError("NVIDIA NIM no está configurado. Falta NIM_API_KEY o NVIDIA_API_KEY.")
 
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    payload = {
-        "model": config["nim_model"],
-        "messages": messages,
-        "max_tokens": config["nim_max_tokens"],
-        "temperature": 0.4,
-        "stream": False,
-    }
+    payload = _nim_payload(messages, stream=False)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
     try:
-        timeout = httpx.Timeout(config["nim_timeout_seconds"], connect=10.0)
+        # read timeout más holgado: informes de misión pueden tardar
+        timeout = httpx.Timeout(max(config["nim_timeout_seconds"], 90.0), connect=10.0)
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
     except httpx.TimeoutException:
         raise ConnectionError(
-            f"NVIDIA NIM no respondió en {int(config['nim_timeout_seconds'])} segundos."
+            f"NVIDIA NIM no respondió en {int(max(config['nim_timeout_seconds'], 90))} segundos."
         )
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429).")
+            raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429). Espera ~1 min (free tier ~40 RPM).")
         if e.response.status_code == 401:
             raise ConnectionError("NVIDIA NIM rechazó la API key (401). Verifica NIM_API_KEY.")
         if e.response.status_code == 503:
             raise ConnectionError("NVIDIA NIM está sobrecargado (503). Intenta de nuevo.")
-        raise ConnectionError(f"Error HTTP {e.response.status_code} de NVIDIA NIM.")
+        detail = ""
+        try:
+            detail = e.response.text[:200]
+        except Exception:
+            pass
+        raise ConnectionError(f"Error HTTP {e.response.status_code} de NVIDIA NIM. {detail}".strip())
     except ValueError:
         raise ConnectionError("Respuesta inesperada de NVIDIA NIM. Revisa el formato de la API.")
 
@@ -134,7 +171,7 @@ def _chat_with_nim(messages: list[dict]) -> str:
     if not choices:
         raise ConnectionError("NVIDIA NIM respondió sin choices válidos.")
 
-    text = choices[0].get("message", {}).get("content", "").strip()
+    text = _extract_nim_message_text(choices[0].get("message"))
     if not text:
         raise ConnectionError("NVIDIA NIM no devolvió texto utilizable.")
 
@@ -178,12 +215,18 @@ def _chat_with_openrouter(messages: list[dict]) -> str:
             f"OpenRouter no respondió en {int(config['openrouter_timeout_seconds'])} segundos."
         )
     except httpx.HTTPStatusError as e:
+        model = config["openrouter_model"]
         if e.response.status_code == 429:
             raise ConnectionError("OpenRouter alcanzó su límite de solicitudes (429).")
         if e.response.status_code == 401:
             raise ConnectionError("OpenRouter rechazó la API key (401). Verifica OPENROUTER_API_KEY.")
         if e.response.status_code == 503:
             raise ConnectionError("OpenRouter está sobrecargado (503). Intenta de nuevo.")
+        if e.response.status_code == 404:
+            raise ConnectionError(
+                f"OpenRouter 404: modelo '{model}' no disponible (free tier retirado o slug incorrecto). "
+                "Prueba OPENROUTER_MODEL=openrouter/free en .env"
+            )
         raise ConnectionError(f"Error HTTP {e.response.status_code} de OpenRouter.")
     except ValueError:
         raise ConnectionError("Respuesta inesperada de OpenRouter. Revisa el formato de la API.")
@@ -210,7 +253,7 @@ def _stream_with_openrouter(messages: list[dict]):
         "model": config["openrouter_model"],
         "messages": messages,
         "temperature": 0.4,
-        "max_tokens": 512,
+        "max_tokens": max(512, config.get("nim_max_tokens") or 512),
         "stream": True,
     }
     headers = {
@@ -247,12 +290,18 @@ def _stream_with_openrouter(messages: list[dict]):
             f"OpenRouter no respondió en {int(config['openrouter_timeout_seconds'])} segundos."
         )
     except httpx.HTTPStatusError as e:
+        model = config["openrouter_model"]
         if e.response.status_code == 429:
             raise ConnectionError("OpenRouter alcanzó su límite de solicitudes (429).")
         if e.response.status_code == 401:
             raise ConnectionError("OpenRouter rechazó la API key (401). Verifica OPENROUTER_API_KEY.")
         if e.response.status_code == 503:
             raise ConnectionError("OpenRouter está sobrecargado (503). Intenta de nuevo.")
+        if e.response.status_code == 404:
+            raise ConnectionError(
+                f"OpenRouter 404: modelo '{model}' no disponible (free tier retirado o slug incorrecto). "
+                "Prueba OPENROUTER_MODEL=openrouter/free en .env"
+            )
         raise ConnectionError(f"Error HTTP {e.response.status_code} de OpenRouter.")
     except ConnectionError:
         raise
@@ -328,20 +377,14 @@ def _stream_with_nim(messages: list[dict]):
         raise ConnectionError("NVIDIA NIM no está configurado. Falta NIM_API_KEY o NVIDIA_API_KEY.")
 
     url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    payload = {
-        "model": config["nim_model"],
-        "messages": messages,
-        "max_tokens": config["nim_max_tokens"],
-        "temperature": 0.4,
-        "stream": True,
-    }
+    payload = _nim_payload(messages, stream=True)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
     try:
-        timeout = httpx.Timeout(config["nim_timeout_seconds"], connect=10.0)
+        timeout = httpx.Timeout(max(config["nim_timeout_seconds"], 90.0), connect=10.0)
         with httpx.Client(timeout=timeout) as client:
             with client.stream("POST", url, json=payload, headers=headers) as response:
                 response.raise_for_status()
@@ -358,17 +401,17 @@ def _stream_with_nim(messages: list[dict]):
                     choices = chunk.get("choices") or []
                     if not choices:
                         continue
-                    delta = choices[0].get("delta", {})
+                    delta = choices[0].get("delta", {}) or {}
                     content = delta.get("content")
                     if content:
                         yield content
     except httpx.TimeoutException:
         raise ConnectionError(
-            f"NVIDIA NIM no respondió en {int(config['nim_timeout_seconds'])} segundos."
+            f"NVIDIA NIM no respondió en {int(max(config['nim_timeout_seconds'], 90))} segundos."
         )
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429).")
+            raise ConnectionError("NVIDIA NIM alcanzó su límite de solicitudes (429). Espera ~1 min (free tier ~40 RPM).")
         if e.response.status_code == 401:
             raise ConnectionError("NVIDIA NIM rechazó la API key (401). Verifica NIM_API_KEY.")
         if e.response.status_code == 503:
@@ -457,6 +500,23 @@ def chat_stream(messages: list[dict]):
                     audit.info("llm_provider", "llm", "Stream de NVIDIA NIM completado",
                                {"provider": "nim", "model": config["nim_model"]})
                     return
+                # Stream vacío → reintento non-stream (más fiable en informes largos)
+                audit.warn(
+                    "llm_fallback",
+                    "llm",
+                    "NIM stream vacío; reintentando sin stream",
+                    {"provider": "nim", "attempt": nim_attempts},
+                )
+                text = _chat_with_nim(messages)
+                if text:
+                    yield text
+                    audit.info(
+                        "llm_provider",
+                        "llm",
+                        "Respuesta NIM non-stream tras stream vacío",
+                        {"provider": "nim", "model": config["nim_model"]},
+                    )
+                    return
                 errors.append("NIM: no entregó contenido.")
                 continue
             except ConnectionError as exc:
@@ -478,6 +538,11 @@ def chat_stream(messages: list[dict]):
                 if delivered:
                     audit.info("llm_provider", "llm", "Stream de OpenRouter completado",
                                {"provider": "openrouter", "model": config["openrouter_model"]})
+                    return
+                # Fallback non-stream
+                text = _chat_with_openrouter(messages)
+                if text:
+                    yield text
                     return
                 errors.append("OpenRouter: no entregó contenido.")
             except ConnectionError as exc:

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ipconfig",
+    "command": "ipconfig",
+    "title": "Configuración de red",
+    "category": "network",
+    "summary": "Muestra adaptadores, IPs, DNS y gateway en Windows.",
+    "explanation": "ipconfig es el equivalente práctico a ifconfig/ip en Windows. Con /all expone MAC, DHCP, DNS y sufijos. Útil en recon local, troubleshooting y verificación de interfaz activa tras un incidente.",
+    "examples": [
+      "ipconfig",
+      "ipconfig /all",
+      "ipconfig /flushdns",
+      "ipconfig /release && ipconfig /renew"
+    ],
+    "tags": ["network", "dns", "dhcp", "cmd"]
+  },
+  {
+    "id": "netstat",
+    "command": "netstat",
+    "title": "Conexiones y puertos",
+    "category": "network",
+    "summary": "Lista conexiones TCP/UDP y puertos en escucha.",
+    "explanation": "netstat -ano muestra conexiones con PID. Cruza el PID con tasklist/Get-Process para identificar procesos que escuchan o hacen C2. En PowerShell moderno se prefiere Get-NetTCPConnection.",
+    "examples": [
+      "netstat -ano",
+      "netstat -anob",
+      "netstat -ano | findstr LISTENING"
+    ],
+    "tags": ["network", "ports", "cmd", "ir"]
+  },
+  {
+    "id": "Get-Process",
+    "command": "Get-Process",
+    "title": "Procesos en ejecución (PowerShell)",
+    "category": "process",
+    "summary": "Lista procesos con métricas en PowerShell.",
+    "explanation": "Get-Process (alias gps/ps) enumera procesos. Combínalo con Where-Object y Stop-Process en IR. Para árbol de procesos y línea de comando completa usa Get-CimInstance Win32_Process.",
+    "examples": [
+      "Get-Process",
+      "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10",
+      "Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine"
+    ],
+    "tags": ["powershell", "process", "ir", "dfir"]
+  },
+  {
+    "id": "Get-EventLog",
+    "command": "Get-WinEvent",
+    "title": "Eventos de Windows",
+    "category": "logs",
+    "summary": "Consulta Security/System/Application y canales ETW.",
+    "explanation": "Get-WinEvent es el método moderno para leer Event Logs. Filtra por LogName, ID y tiempo. Clave en Blue Team para logon failures (4625), creación de servicios y PowerShell logging.",
+    "examples": [
+      "Get-WinEvent -LogName Security -MaxEvents 20",
+      "Get-WinEvent -FilterHashtable @{LogName='Security'; ID=4625; StartTime=(Get-Date).AddHours(-1)}"
+    ],
+    "tags": ["logs", "powershell", "soc", "security"]
+  },
+  {
+    "id": "whoami",
+    "command": "whoami",
+    "title": "Identidad del usuario actual",
+    "category": "identity",
+    "summary": "Muestra usuario, grupos y privilegios.",
+    "explanation": "whoami /all revela SID, grupos y privilegios (SeDebugPrivilege, etc.). Primer comando en post-explotación ética y en validación de contexto de sesión admin vs usuario.",
+    "examples": [
+      "whoami",
+      "whoami /all",
+      "whoami /priv"
+    ],
+    "tags": ["identity", "cmd", "privileges"]
+  }
+]

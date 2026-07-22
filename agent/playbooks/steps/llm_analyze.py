@@ -9,6 +9,10 @@ from ..models import PlaybookStep
 from .base import StepExecutor, StepContext, register
 from agent.core import llm_client
 
+# Límite de contexto previo para no saturar free tier / timeouts en 2º–3º llm_analyze
+_MAX_PREV_CHARS = 6000
+_MAX_SINGLE_OUT = 3500
+
 
 def _chunk_by_words(text: str):
     """Genera chunks más legibles: emite palabras completas, no caracteres sueltos."""
@@ -22,19 +26,46 @@ def _chunk_by_words(text: str):
         yield "".join(buffer)
 
 
+def _trim(text: str, limit: int) -> str:
+    text = text or ""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "\n...[truncado]..."
+
+
+def _build_previous_output(outputs: dict) -> str:
+    parts: list[str] = []
+    total = 0
+    items = list(outputs.items())
+    # Preferir outputs recientes (últimos steps) si hay que cortar
+    for step_id, out in reversed(items):
+        block = f"[{step_id}]\n{_trim(str(out), _MAX_SINGLE_OUT)}"
+        if total + len(block) > _MAX_PREV_CHARS and parts:
+            break
+        parts.append(block)
+        total += len(block)
+    parts.reverse()
+    return "\n\n".join(parts)
+
+
 @register("llm_analyze")
 class LLMAnalyzeExecutor(StepExecutor):
     async def run(self, step: PlaybookStep, ctx: StepContext):
         if not step.prompt:
             raise ValueError(f"Step '{step.id}' de tipo llm_analyze requiere 'prompt'")
 
-        previous_output = "\n\n".join(
-            f"[{step_id}]\n{out}" for step_id, out in ctx.outputs.items()
-        )
+        previous_output = _build_previous_output(ctx.outputs)
         full_prompt = f"{step.prompt}\n\nResultados previos:\n{previous_output}"
 
         messages = [
-            {"role": "system", "content": "Eres ARES, un asistente de ciberseguridad. Responde de forma técnica y profesional."},
+            {
+                "role": "system",
+                "content": (
+                    "Eres ARES, un asistente de ciberseguridad. "
+                    "Responde de forma técnica y profesional en español. "
+                    "No uses bloques de pensamiento interno; entrega solo el informe final."
+                ),
+            },
             {"role": "user", "content": full_prompt},
         ]
 

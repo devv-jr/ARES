@@ -27,12 +27,12 @@ export default function InputArea({ value, onChange, onSend, loading }) {
         <div className="flex items-center gap-1">
           <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200">
             <Paperclip className="h-3.5 w-3.5" />
-            Adjuntar log
+            Adjuntar Evidencia
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200">
+          {/* <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-zinc-400 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200">
             <SlidersHorizontal className="h-3.5 w-3.5" />
             Ajustes
-          </button>
+          </button> */}
         </div>
 
         <div className="flex items-center gap-2">

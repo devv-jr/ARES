@@ -74,6 +74,46 @@ async def stream_subprocess(*cmd: str, timeout: int = 60) -> AsyncIterator[str]:
         # Incluimos el output real (stderr/stdout mezclado) para que el error
         # llegue completo al frontend, no solo el código de salida.
         detail = " | ".join(captured[-5:]) if captured else "sin output"
+        friendly = _friendly_docker_error(detail)
+        if friendly:
+            raise RuntimeError(friendly)
         raise RuntimeError(
             f"Comando '{' '.join(cmd)}' terminó con código {returncode}. Detalle: {detail}"
         )
+
+
+def _friendly_docker_error(detail: str) -> str | None:
+    """Traduce errores típicos de Docker Desktop (Windows) a mensajes accionables."""
+    low = (detail or "").lower()
+    docker_down = (
+        "dockerdesktoplinuxengine" in low
+        or "cannot connect to the docker daemon" in low
+        or "error during connect" in low
+        or "docker daemon is not running" in low
+        or "is the docker daemon running" in low
+        or (
+            "pipe" in low
+            and (
+                "the system cannot find the file specified" in low
+                or "el sistema no puede encontrar el archivo especificado" in low
+            )
+        )
+    )
+    if docker_down:
+        return (
+            "Docker Desktop no está en ejecución. "
+            "Ábrelo desde el menú Inicio, espera a que diga 'Engine running' "
+            "y vuelve a lanzar la misión. "
+            "Las misiones con lab (Hardening Linux, OWASP, Port Sweep) requieren Docker."
+        )
+    if "permission denied" in low and "docker" in low:
+        return (
+            "Sin permiso para usar Docker. En Windows: asegúrate de que Docker Desktop "
+            "esté iniciado y de que tu usuario pueda acceder al motor."
+        )
+    if "pull access denied" in low or ("not found" in low and "pull" in low):
+        return (
+            "No se pudo descargar la imagen Docker. Revisa tu conexión a internet "
+            f"y que Docker Desktop esté en ejecución. Detalle: {detail}"
+        )
+    return None

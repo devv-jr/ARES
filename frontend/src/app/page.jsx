@@ -19,6 +19,7 @@ import AiCore from "../components/AiCore"
 import InputArea from "../components/InputArea"
 import ChatLog from "../components/ChatLog"
 import MissionBuilderView from "../components/MissionBuilderView"
+import ToolsPanel from "../components/ToolsPanel"
 import StatusPanel from "../components/StatusPanel"
 import KnowledgeBaseView from "../components/KnowledgeBaseView"
 import EvidenciasPanel from "../components/EvidenciasPanel"
@@ -339,7 +340,7 @@ export default function AresDashboard() {
           </AnimatePresence>
 
           <div className={`flex flex-1 flex-col overflow-y-auto ${activeSection === "kb" || activeSection === "evidencias" ? "px-6" : "px-6 py-8"}`}>
-            {activeSection !== "kb" && activeSection !== "console" && activeSection !== "evidencias" && (
+            {activeSection !== "kb" && activeSection !== "console" && activeSection !== "evidencias" && activeSection !== "tools" && (
               <div className="flex flex-1 flex-col">
                 <AnimatePresence mode="wait">
                   {!dashboardOpen ? (
@@ -414,6 +415,12 @@ export default function AresDashboard() {
             {dashboardOpen && activeSection === "evidencias" && (
               <div className="flex flex-col items-center flex-1 overflow-y-auto pt-12">
                 <EvidenciasPanel />
+              </div>
+            )}
+
+            {dashboardOpen && activeSection === "tools" && (
+              <div className="flex flex-col items-center flex-1 overflow-y-auto pt-8 pb-8">
+                <ToolsPanel />
               </div>
             )}
 

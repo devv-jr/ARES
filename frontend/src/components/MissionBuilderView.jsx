@@ -641,15 +641,26 @@ export default function MissionBuilderView() {
           </div>
 
           {m.lab && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg border border-zinc-800/60 bg-zinc-900/40 p-2.5">
-              <FlaskConical className="h-3.5 w-3.5 text-cyan-500 shrink-0 mt-0.5" />
-              <div className="text-[10px] text-zinc-500">
-                <span className="text-cyan-400 font-semibold">Lab:</span>{" "}
-                {m.lab.description}
-                {m.lab.image && (
-                  <span className="ml-1 font-mono text-zinc-600">({m.lab.image})</span>
-                )}
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="flex items-start gap-2 rounded-lg border border-zinc-800/60 bg-zinc-900/40 p-2.5">
+                <FlaskConical className="h-3.5 w-3.5 text-cyan-500 shrink-0 mt-0.5" />
+                <div className="text-[10px] text-zinc-500">
+                  <span className="text-cyan-400 font-semibold">Lab:</span>{" "}
+                  {m.lab.description}
+                  {m.lab.image && (
+                    <span className="ml-1 font-mono text-zinc-600">({m.lab.image})</span>
+                  )}
+                </div>
               </div>
+              {m.lab.image && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-900/40 bg-amber-950/20 p-2.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-200/80 leading-relaxed">
+                    Requiere <span className="font-semibold text-amber-300">Docker Desktop</span> en ejecución
+                    (ícono de ballena → Engine running). Si falla el deploy, ábrelo y reintenta.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

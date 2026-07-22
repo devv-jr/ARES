@@ -143,8 +143,10 @@ def append_event(run_id: str, event: dict[str, Any]) -> dict[str, Any] | None:
                 if s.get("id") == step_id:
                     s.setdefault("logs", []).append(text)
                     break
+            # Concatenar sin "\n" forzado: el LLM ya trae saltos reales;
+            # si no, el PDF/MD sale carácter-por-línea (texto vertical).
             outs = run.setdefault("outputs", {})
-            outs[step_id] = (outs.get(step_id) or "") + text + "\n"
+            outs[step_id] = (outs.get(step_id) or "") + text
 
     elif etype == "step_end" and step_id:
         for s in run.setdefault("steps", []):

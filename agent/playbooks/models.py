@@ -25,7 +25,7 @@ class PlaybookStep(BaseModel):
     # Campos opcionales según el tipo de step
     image: str | None = None                       # docker_deploy
     command: str | None = None                      # command
-    args: list[str] = Field(default_factory=list)   # command
+    args: list[str] = Field(default_factory=list)   # command | docker_deploy (cmd del contenedor)
     prompt: str | None = None                        # llm_analyze
     asset: str | None = None                         # inspect_asset (relativo a assets/)
     timeout: int = 60                                 # segundos

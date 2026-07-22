@@ -20,6 +20,7 @@
       "type": "docker_deploy",
       "name": "Desplegar lab Ubuntu",
       "image": "ubuntu:22.04",
+      "args": ["sleep", "infinity"],
       "timeout": 180
     },
     {

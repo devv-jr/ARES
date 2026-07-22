@@ -1,0 +1,75 @@
+[
+  {
+    "id": "systemctl",
+    "command": "systemctl",
+    "title": "Control de servicios systemd",
+    "category": "services",
+    "summary": "Gestiona servicios, unidades y el estado del sistema con systemd.",
+    "explanation": "systemctl es la interfaz principal de systemd. Permite iniciar, detener, reiniciar, habilitar al boot y consultar el estado de servicios (unidades .service). En Blue Team se usa para verificar persistencia maliciosa, servicios caídos y hardening de unidades expuestas.",
+    "examples": [
+      "systemctl status ssh",
+      "systemctl start nginx",
+      "systemctl stop nginx",
+      "systemctl enable --now fail2ban",
+      "systemctl list-units --type=service --state=running"
+    ],
+    "tags": ["systemd", "service", "daemon", "boot"]
+  },
+  {
+    "id": "ss",
+    "command": "ss",
+    "title": "Sockets y puertos en escucha",
+    "category": "network",
+    "summary": "Muestra sockets TCP/UDP (reemplazo moderno de netstat).",
+    "explanation": "ss consulta el kernel por sockets activos. Ideal para ver puertos en escucha, conexiones establecidas y detectar servicios expuestos o C2. Combínalo con -tulpn para TCP/UDP listening y PID/proceso.",
+    "examples": [
+      "ss -tulpn",
+      "ss -tnp",
+      "ss -ltn 'sport = :22'"
+    ],
+    "tags": ["network", "ports", "netstat", "listening"]
+  },
+  {
+    "id": "journalctl",
+    "command": "journalctl",
+    "title": "Logs del journal de systemd",
+    "category": "logs",
+    "summary": "Consulta logs centralizados de systemd y servicios.",
+    "explanation": "journalctl lee el journal binario de systemd. Permite filtrar por unidad, prioridad, tiempo y seguir en vivo. Esencial en IR/SOC para correlacionar fallos de auth, crashes y actividad de servicios.",
+    "examples": [
+      "journalctl -u ssh -n 50",
+      "journalctl -xe",
+      "journalctl --since '1 hour ago' -p err"
+    ],
+    "tags": ["logs", "systemd", "forensics", "soc"]
+  },
+  {
+    "id": "chmod",
+    "command": "chmod",
+    "title": "Permisos de archivos",
+    "category": "permissions",
+    "summary": "Cambia permisos de lectura/escritura/ejecución.",
+    "explanation": "chmod modifica bits de permiso (rwx) para owner/group/others. En hardening se usa para eliminar world-writable y SUID innecesarios. Prefiere notación octal (750) o simbólica (u+x).",
+    "examples": [
+      "chmod 644 file.txt",
+      "chmod 750 script.sh",
+      "chmod -R g-w /var/www"
+    ],
+    "tags": ["permissions", "hardening", "files"]
+  },
+  {
+    "id": "ufw",
+    "command": "ufw",
+    "title": "Firewall uncomplicated",
+    "category": "firewall",
+    "summary": "Frontend simple de iptables/nftables en Ubuntu/Debian.",
+    "explanation": "UFW facilita reglas de firewall. Tras un incidente, sirve para contención rápida (deny incoming, allow solo SSH de confianza). Siempre verifica status antes y después de cambios.",
+    "examples": [
+      "ufw status verbose",
+      "ufw default deny incoming",
+      "ufw allow 22/tcp",
+      "ufw enable"
+    ],
+    "tags": ["firewall", "network", "hardening", "blue-team"]
+  }
+]
